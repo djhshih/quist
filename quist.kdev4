@@ -1,0 +1,4 @@
+[Project]
+Name=quist
+Manager=KDevCMakeManager
+VersionControl=kdevgit
