@@ -4,7 +4,7 @@ using namespace std;
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include "Matrix.hpp"
+#include "matrix.hpp"
 using namespace quist;
 
 string progname = "quist";

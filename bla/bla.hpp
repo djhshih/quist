@@ -8,6 +8,10 @@ namespace bla {
 	/**
 	 * Vector dot product.
 	 * Dot product of two vectors.
+	 * @param a vector
+	 * @param b vector
+	 * @param n size
+	 * @return dot product of a and b
 	 */
 	template <typename T>
 	T dot(T a[], T b[], size_t n) {
