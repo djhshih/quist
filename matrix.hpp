@@ -1,5 +1,5 @@
-#ifndef quist_Matrix_h
-#define quist_Matrix_h
+#ifndef quist_matrix_h
+#define quist_matrix_h
 
 #include <fstream>
 #include <iostream>

@@ -14,7 +14,7 @@ namespace bla {
 	 * @return dot product of a and b
 	 */
 	template <typename T>
-	T dot(T a[], T b[], size_t n) {
+	T dot(const T a[], const T b[], size_t n) {
 		T d = 0;
 		for (size_t i = 0; i < n; ++i) {
 			d += a[i] * b[i];
@@ -45,7 +45,7 @@ namespace bla {
 		x[n-1] = r[n-1] / b[n-1];
 
 		// back substitution
-		for (size_t i = n-2; i >= 0; --i) {
+		for (long i = n-2; i >= 0; --i) {
 			x[i] = ( r[i] - c[i]*x[i+1] ) / b[i];
 		}
 	}
@@ -60,7 +60,7 @@ namespace bla {
 	 * @param d output d coefficients
 	 */
 	template <typename T>
-	void ncspline(size_t n, T x[], T y[], T b[], T c[], T d[]) {
+	void ncspline(size_t n, const T x[], const T y[], T b[], T c[], T d[]) {
 
 		// calculate h_i = x_i+1 - x_i
 		T *h = new T[n-1];
@@ -118,15 +118,18 @@ namespace bla {
 	 * @param yy output interpolated values
 	 */
 	template <typename T>
-	void splint(size_t n, T x[], T a[], T b[], T c[], T d[], size_t nn, T xx[], T yy[]) {
+	void splint(size_t n, const T x[], const T a[], const T b[], T const c[], const T d[], size_t nn, const T xx[], T yy[]) {
 
 		size_t ii = 0;
 		for (size_t i = 0; i < n-1; ++i) {
+			
 			// find starting index ii
-			while (ii < nn && xx[ii++] < x[i]);
+			while (ii < nn && xx[ii] < x[i]) {
+				++i;
+			}
 			
 			// interpolate until the next spline
-			while (ii < nn && xx[ii] < x[i+1]) {
+			while (ii < nn && xx[ii] <= x[i+1]) {
 				T t = xx[ii] - x[i];
 				yy[ii++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
 			}
@@ -134,6 +137,30 @@ namespace bla {
 			if (ii >= nn) break;
 		}
 
+	}
+	
+	/**
+	 * Spline interpolation.
+	 * For one-time use.
+	 * @param n number of fitted data points
+	 * @param x values of x at fitted data points
+	 * @param y value of function evaluated at x
+	 * @param nn number of interpolants
+	 * @param xx values of x at data points to be interpolated
+	 * @param yy output interpolated values
+	 */
+	template <typename T>
+	void splint(size_t n, const T x[], const T y[], size_t nn, const T xx[], T yy[]) {
+		T* b = new T[n];
+		T* c = new T[n];
+		T* d = new T[n];
+		
+		bla::ncspline(n, x, y, b, c, d);
+		bla::splint(n, x, y, b, c, d, nn, xx, yy);
+		
+		delete [] b;
+		delete [] c;
+		delete [] d;
 	}
 
 }
