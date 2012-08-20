@@ -2,7 +2,12 @@
 #define quist_emd_h
 
 #include <cstdlib>
+#include <ctime>
 #include <cmath>
+
+#include <boost/random/variate_generator.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
 
 #include <bla/bla.hpp>
 
@@ -10,7 +15,7 @@
 
 namespace emd {
 	
-		/**
+	/**
 	 * Copy array.
 	 * Memory is dynamically allocated to returned array and must be freed.
 	 * @param x array to copy
@@ -44,6 +49,16 @@ namespace emd {
 		}
 	}
 	
+	template <typename T>
+	void init_arrays(T** x, size_t m, size_t n, T v) {
+		for (size_t i = 0; i < m; ++i) {
+			x[i] = new T[n];
+			for (size_t j = 0; j < n; ++j) {
+				x[i][j] = v;
+			}
+		}
+	}
+	
 	unsigned int log2 (unsigned int val) {
 		unsigned int ret = -1;
 		while (val != 0) {
@@ -51,6 +66,20 @@ namespace emd {
 			++ret;
 		}
 		return ret;
+	}
+	
+	template <typename T>
+	void summary(const T a[], size_t n, T* mean, T* sd) {
+		T m = 0, devsq = 0, t, x;
+		for (size_t j = 0; j < n; ++j) {
+			x = a[j];	
+			t = (x - m);
+			m += (x - m) / (j+1);
+			devsq += t * (x - m);
+		}
+		
+		if (mean != NULL) *mean = m;
+		if (sd != NULL) *sd = std::sqrt( devsq/n );
 	}
 	
 	/**
@@ -160,24 +189,25 @@ namespace emd {
 	 * @param n number of data points (n >= 4)
 	 * @param x x values
 	 * @param y y values
-	 * @param kk expected number of instrinsic mode functions plus residual; modified to the actual number
-	 * @param max_ter max number of iterations per instrict mode function
-	 * @return array of k instrinsic mode functions (evaluated at x)
+	 * @param kk expected number of instrinsic mode functions plus residual; 
+	 *           if kk <= 1, kk is modified to an estimate
+	 * @param max_iter max number of iterations per instrict mode function
+	 * @return array of k instrinsic mode functions (array of size n, evaluated at x)
 	 */
 	template <typename T, typename U>
 	T** emd(size_t n, const T x[], const U y[], size_t* kk, size_t max_iter=10) {
 	
 		size_t k = *kk;
-		
 		if (k <= 1) {
 			// expected number of intrinsic mode functions is log2(n)
-			k = log2(n);
 			// plus one to number of output arrays for the residual
-			++k;
+			k = log2(n) + 1;
+			// modify input parameter
+			*kk = k;
 		}
 		
 		// allocate memory
-		T** modes = new U*[k];
+		U** modes = new U*[k];
 		
 		// allocate arrays for storing x and y values of extrema points, 
 		//   and upper and lower envelops
@@ -223,7 +253,6 @@ namespace emd {
 		// save the residual
 		modes[k-1] = copied(running, n);
 		
-		*kk = k;
 		
 		delete [] current;
 		delete [] running;
@@ -236,6 +265,70 @@ namespace emd {
 		delete [] lower;
 		
 		return modes;
+	}
+
+	/**
+	 * Ensemble Empirical Mode Decomposition.
+	 * @param nsd noise standard deviation, in units of SD of data
+	 * @param ne number of ensembles
+	 */
+	template <typename T, typename U>
+	T** eemd(size_t n, const T x[], const U y[], size_t* kk, U nsd, size_t ne, size_t max_iter=10) {
+		
+		// calculate SD of data
+		U mean, sd;
+		summary(y, n, &mean, &sd);
+		
+		// pseudo random number generator
+		typedef boost::mt19937 Prng;
+		typedef boost::random::normal_distribution<U> Norm;
+		boost::variate_generator<Prng, Norm> rnorm(Prng((unsigned)std::time(NULL)), Norm(0, nsd*sd));
+		
+		size_t k = *kk;
+		if (k <= 1) {
+			// expected number of intrinsic mode functions is log2(n)
+			// plus one to number of output arrays for the residual
+			k = log2(n) + 1;
+			// modify input parameter
+			*kk = k;
+		}
+		
+		// allocate memory
+		U** ensemble = new U*[k];
+		init_arrays(ensemble, k, n, 0.0);
+		
+		for (size_t r = 0; r < ne; ++r) {
+		
+			// create new signal with added noise
+			U* y2 = new U[n];
+			for (size_t i = 0; i < n; ++i) {
+				U r = rnorm();
+				y2[i] = y[i] + r;
+				//y2[i] = y[i] + rnorm();
+			}
+				
+			U** modes = emd(n, x, y2, kk, max_iter);
+			
+			// accumulate sum
+			for (size_t i = 0; i < k; ++i) {
+				for (size_t j = 0; j < n; ++j) {
+					ensemble[i][j] += modes[i][j];
+				}
+			}
+			
+			delete [] y2;
+			free_arrays(modes, k);
+		
+		}
+		
+		// scale the ensembled values
+		for (size_t i = 0; i < k; ++i) {
+			for (size_t j = 0; j < n; ++j) {
+				ensemble[i][j] /= ne;
+			}
+		}
+		
+		return ensemble;
 	}
 
 };
