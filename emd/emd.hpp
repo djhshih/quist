@@ -330,26 +330,40 @@ namespace emd {
 		return ensemble;
 	}
 	
-	void sample(size_t n, size_t ns, size_t idx[]) {
-		// down-sampling
-		size_t window_size = n / ns;
-		size_t window_idx = 0;
-		for (size_t i = 0; i < ns * window_size; i += window_size) {
-			size_t j = i + (std::rand() % window_size);
-			idx[window_idx++] = j;
+	/**
+	 * Down-sample.
+	 * NB  last datum may never be sampled if population size is not a multiple of the sample size.
+	 * @param n population size
+	 * @param ns sample size (ns < n)
+	 * @param idx output sampled index
+	 */
+	void downsample(size_t n, size_t ns, size_t idx[]) {
+		
+		if (n % ns == 0) {
+			
+			// simple down-sampling
+			size_t window_size = n / ns;
+			size_t wi = 0;
+			for (size_t i = 0; i < ns * window_size; i += window_size) {
+				size_t j = i + (std::rand() % window_size);
+				idx[wi++] = j;
+			}
+		
+		} else {
+			
+			// down-sampling using floating point boundaries
+			float window_size = n / (float)ns;
+			size_t wi = 0;
+			for (float i = 0; (size_t)i < n; i += window_size) {
+				// determine current window size
+				size_t start = (size_t)i;
+				size_t end = (size_t)(i + window_size);
+				size_t j = i + (std::rand() % (end - start));
+				idx[wi++] = j;
+			}
+			
 		}
 		
-		// re-process last window, if it there is are remaining data after last full window
-		// NB     this may result in much reduced sampling of last window
-		// FIXME  possible fix: use floating point boundary; calculate individual window size based on boundaries
-		if (n % ns != 0) {
-			// re-wind to last window
-			--window_idx;
-			size_t i = (ns-1) * window_size;
-			// expanded last window (size n - i) now includes all remaining data
-			size_t j = i + std::rand() % (n - i);
-			idx[window_idx] = j;
-		}
 	}
 	
 	/**
@@ -384,7 +398,7 @@ namespace emd {
 			T* x2 = new U[ns];
 			U* y2 = new U[ns];
 		
-			sample(n, ns, idx);
+			downsample(n, ns, idx);
 			
 			// copy sampled data
 			// keep track of number of times each datum is sampled
@@ -417,9 +431,6 @@ namespace emd {
 			}
 		}
 		
-		for (size_t j = 0; j < n; ++j) {
-			std::printf("%d %d\n", j, counts[j]);
-		}
 		delete [] counts;
 		
 		return ensemble;
