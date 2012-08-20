@@ -50,13 +50,15 @@ namespace emd {
 	}
 	
 	template <typename T>
-	void init_arrays(T** x, size_t m, size_t n, T v) {
+	T** new_arrays(size_t m, size_t n, T v) {
+		T** x = new T*[m];
 		for (size_t i = 0; i < m; ++i) {
 			x[i] = new T[n];
 			for (size_t j = 0; j < n; ++j) {
 				x[i][j] = v;
 			}
 		}
+		return x;
 	}
 	
 	unsigned int log2 (unsigned int val) {
@@ -275,15 +277,6 @@ namespace emd {
 	template <typename T, typename U>
 	T** eemd(size_t n, const T x[], const U y[], size_t* kk, U nsd, size_t ne, size_t max_iter=10) {
 		
-		// calculate SD of data
-		U mean, sd;
-		summary(y, n, &mean, &sd);
-		
-		// pseudo random number generator
-		typedef boost::mt19937 Prng;
-		typedef boost::random::normal_distribution<U> Norm;
-		boost::variate_generator<Prng, Norm> rnorm(Prng((unsigned)std::time(NULL)), Norm(0, nsd*sd));
-		
 		size_t k = *kk;
 		if (k <= 1) {
 			// expected number of intrinsic mode functions is log2(n)
@@ -294,17 +287,23 @@ namespace emd {
 		}
 		
 		// allocate memory
-		U** ensemble = new U*[k];
-		init_arrays(ensemble, k, n, 0.0);
+		U** ensemble = new_arrays(k, n, 0.0);
+		
+		// calculate SD of data
+		U mean, sd;
+		summary(y, n, &mean, &sd);
+		
+		// pseudo random number generator
+		typedef boost::mt19937 Prng;
+		typedef boost::random::normal_distribution<U> Norm;
+		boost::variate_generator<Prng, Norm> rnorm(Prng((unsigned)std::time(NULL)), Norm(0, nsd*sd));
 		
 		for (size_t r = 0; r < ne; ++r) {
 		
 			// create new signal with added noise
 			U* y2 = new U[n];
 			for (size_t i = 0; i < n; ++i) {
-				U r = rnorm();
-				y2[i] = y[i] + r;
-				//y2[i] = y[i] + rnorm();
+				y2[i] = y[i] + rnorm();
 			}
 				
 			U** modes = emd(n, x, y2, kk, max_iter);
@@ -321,7 +320,7 @@ namespace emd {
 		
 		}
 		
-		// scale the ensembled values
+		// scale the ensemble values
 		for (size_t i = 0; i < k; ++i) {
 			for (size_t j = 0; j < n; ++j) {
 				ensemble[i][j] /= ne;
@@ -330,7 +329,102 @@ namespace emd {
 		
 		return ensemble;
 	}
-
+	
+	void sample(size_t n, size_t ns, size_t idx[]) {
+		// down-sampling
+		size_t window_size = n / ns;
+		size_t window_idx = 0;
+		for (size_t i = 0; i < ns * window_size; i += window_size) {
+			size_t j = i + (std::rand() % window_size);
+			idx[window_idx++] = j;
+		}
+		
+		// re-process last window, if it there is are remaining data after last full window
+		// NB     this may result in much reduced sampling of last window
+		// FIXME  possible fix: use floating point boundary; calculate individual window size based on boundaries
+		if (n % ns != 0) {
+			// re-wind to last window
+			--window_idx;
+			size_t i = (ns-1) * window_size;
+			// expanded last window (size n - i) now includes all remaining data
+			size_t j = i + std::rand() % (n - i);
+			idx[window_idx] = j;
+		}
+	}
+	
+	/**
+	 * Empirical Mode Decomposition with down-sampling.
+	 * Data are sampled uniformly along the input array.
+	 * @param ns number of samples
+	 * @param nr number of down-sampling rounds
+	 */
+	template <typename T, typename U>
+	T** dsemd(size_t n, const T x[], const U y[], size_t* kk, size_t ns, size_t nr, size_t max_iter=10) {
+		
+		size_t k = *kk;
+		if (k <= 1) {
+			// expected number of intrinsic mode functions is log2(n)
+			// plus one to number of output arrays for the residual
+			k = log2(n) + 1;
+			// modify input parameter
+			*kk = k;
+		}
+		
+		// allocate memory
+		U** ensemble = new_arrays(k, n, 0.0);
+		size_t* counts = new size_t[n];
+		for (size_t j = 0; j < n; ++j) {
+			counts[j] = 0;
+		}
+		
+		for (size_t r = 0; r < nr; ++r) {
+		
+			// allocate for down-sampled data points
+			size_t* idx = new size_t[ns];
+			T* x2 = new U[ns];
+			U* y2 = new U[ns];
+		
+			sample(n, ns, idx);
+			
+			// copy sampled data
+			// keep track of number of times each datum is sampled
+			for (size_t j = 0; j < ns; ++j) {
+				x2[j] = x[idx[j]];
+				y2[j] = y[idx[j]];
+				++(counts[idx[j]]);
+			}
+			
+			U** modes = emd(ns, x2, y2, kk, max_iter);
+			
+			// accumulate sum
+			for (size_t i = 0; i < k; ++i) {
+				for (size_t j = 0; j < ns; ++j) {
+					ensemble[i][idx[j]] += modes[i][j];
+				}
+			}
+			
+			delete [] idx;
+			delete [] x2;
+			delete [] y2;
+			free_arrays(modes, k);
+			
+		}
+		
+		// scale the ensemble values
+		for (size_t i = 0; i < k; ++i) {
+			for (size_t j = 0; j < n; ++j) {
+				ensemble[i][j] /= counts[j];
+			}
+		}
+		
+		for (size_t j = 0; j < n; ++j) {
+			std::printf("%d %d\n", j, counts[j]);
+		}
+		delete [] counts;
+		
+		return ensemble;
+	}
+	
 };
 
 #endif
