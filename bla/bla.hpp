@@ -20,7 +20,7 @@ namespace bla {
 			d += a[i] * b[i];
 		}
 		return d;
-	}	
+	}
 
 	/**
 	 * Tridiagonal matrix solver.

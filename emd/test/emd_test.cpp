@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE ( eemd_test )
 	size_t n = x.size();
 	size_t nmodes = 4;
 	
-	double** modes = emd::eemd(n, x.data(), y.data(), &nmodes, 0.01, 100);
+	double** modes = emd::eemd(n, x.data(), y.data(), &nmodes, 0.01, 10);
 	//double** modes = emd::emd(n, x.data(), y.data(), &nmodes);
 	
 	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 1e-2), "EEMD modes did not match expected");
