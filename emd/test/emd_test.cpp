@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE ( eemd_test )
 	double** modes = emd::eemd(n, x.data(), y.data(), &nmodes, 0.01, 20);
 	
 	// use a lenient difference threshold, since differences are expected
-	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 1e-2), "EEMD modes did not match expected");
+	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 1e-1), "EEMD modes did not match expected");
 	
 	emd::free_arrays(modes, nmodes);
 }

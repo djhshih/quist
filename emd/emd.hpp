@@ -213,8 +213,8 @@ namespace emd {
 		
 		// allocate arrays for storing x and y values of extrema points, 
 		//   and upper and lower envelops
-		U* min_x = new T[n];
-		U* max_x = new T[n];
+		T* min_x = new T[n];
+		T* max_x = new T[n];
 		U* min_y = new U[n];
 		U* max_y = new U[n];
 		U* upper = new U[n];
