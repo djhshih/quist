@@ -120,7 +120,7 @@ namespace emd {
 		// consider replacing end points with extrapolants
 		if (k+1 >= 4) {
 			
-			T slope, t;
+			U slope, t;
 			
 			slope = (yy[2] - yy[1]) / (xx[2] - xx[1]);
 			t = yy[1] - slope * (xx[1] - xx[0]);
@@ -171,7 +171,7 @@ namespace emd {
 		// consider replacing end points with extrapolants
 		if (k+1 >= 4) {
 			
-			T slope, t;
+			U slope, t;
 			
 			slope = (yy[2] - yy[1]) / (xx[2] - xx[1]);
 			t = yy[1] - slope * (xx[1] - xx[0]);

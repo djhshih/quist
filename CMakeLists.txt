@@ -11,3 +11,4 @@ target_link_libraries(quist boost_program_options)
 
 add_subdirectory(bla/test)
 add_subdirectory(emd/test)
+add_subdirectory(emd/cuda)
