@@ -18,10 +18,11 @@ int main(int argc, char* argv[]) {
 	float *d_x, *d_y, *d_modes;
 	
 	const size_t N = 32 * 32;
-	const size_t wsize = 32 * 32;
+	const size_t wsize = 32 * 32 / 3;
+	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
 	
 	//size_t k = log2((float)N) + 1;
-	size_t k = 3;
+	size_t k = 4;
 	
 	dim3 block_dim = 1;
 	dim3 grid_dim = N / wsize / block_dim.x + (N%block_dim.x == 0 ? 0 : 1);

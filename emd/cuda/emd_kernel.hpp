@@ -235,6 +235,7 @@ __device__ void maxima(size_t n, const coord_t x[], const real_t y[], size_t* kk
 template <typename T>
 __device__ void copy(T dest[], const T src[], size_t n) {
 	memcpy((void*)dest, (const void*)src, n * sizeof(T));
+	//for (size_t i = 0; i < n; ++i) dest[i] = src[i];
 }
 
 template <typename T, typename U>
@@ -265,7 +266,7 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 			maxima(n, x, current, &n_max, max_x, max_y);
 			minima(n, x, current, &n_min, min_x, min_y);
 			
-			// compute upper and lower envelops (parallelizable)
+			// compute upper and lower envelops
 			splint(n_max, max_x, max_y, n, x, upper);
 			splint(n_min, min_x, min_y, n, x, lower);
 			
@@ -285,7 +286,7 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 	}
 	
 	// save the residual
-	copy(&modes[(k-1)*n], running, n);
+	copy(&modes[(k-1)*N], running, n);
 	
 
 	// free memory
