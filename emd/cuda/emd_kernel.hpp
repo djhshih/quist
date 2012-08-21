@@ -238,7 +238,7 @@ __device__ void copy(T dest[], const T src[], size_t n) {
 }
 
 template <typename T, typename U>
-__device__ void emd(size_t N, size_t n, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
+__device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
 
 	// allocate arrays for storing x and y values of extrema points, 
 	//   and upper and lower envelops
@@ -307,7 +307,7 @@ __global__ void emd_all(size_t wsize, size_t n, const coord_t* x, const real_t* 
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t start = idx * wsize;
 	if (start < n) {
-		emd(n, wsize, &x[start], &y[start], k, &modes[start], max_iter);
+		d_emd(n, wsize, &x[start], &y[start], k, &modes[start], max_iter);
 	}
 }
 

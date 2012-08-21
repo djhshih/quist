@@ -62,7 +62,7 @@ namespace emd {
 	}
 	
 	unsigned int log2 (unsigned int val) {
-		unsigned int ret = -1;
+		unsigned int ret = 0;
 		while (val != 0) {
 			val >>= 1;
 			++ret;
