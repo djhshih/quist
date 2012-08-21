@@ -25,10 +25,10 @@ int main(int argc, char* argv[]) {
 	
 	dim3 grid_dim = N / wsize / block_dim.x + (N%block_dim.x == 0 ? 0 : 1);
 	
-	
 	size_t nbytes = N * sizeof(float);
 	size_t nbytes_w = nW * sizeof(size_t);
-	//size_t k;
+	
+	size_t k = log2((float)N) + 1;
 
 	// allocate array on host
 	h_x = (float*)malloc(nbytes);
