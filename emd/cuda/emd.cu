@@ -42,8 +42,9 @@ int main(int argc, char* argv[]) {
 
 	// initialize host array
 	for (size_t i = 0; i < N; i++) {
-		h_x[i] = (float)i;
-		h_y[i] = sin(i/M_PI);
+		float x = (float)i/M_PI;
+		h_x[i] = x;
+		h_y[i] = sin(x) + 0.5 * sin(x/10);
 	}
 	
 	// clear device output arrays

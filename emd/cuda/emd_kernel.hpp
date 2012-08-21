@@ -242,21 +242,18 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 
 	// allocate arrays for storing x and y values of extrema points, 
 	//   and upper and lower envelops
-	size_t nbytes_x = n * sizeof(T);
-	T* min_x = (T*)malloc(nbytes_x);
-	T* max_x = (T*)malloc(nbytes_x);
+	T* min_x = new T[n];
+	T* max_x = new T[n];
 	
-	size_t nbytes_y = n * sizeof(U);
-	U* min_y = (U*)malloc(nbytes_y);
-	U* max_y = (U*)malloc(nbytes_y);
-	U* upper = (U*)malloc(nbytes_y);
-	U* lower = (U*)malloc(nbytes_y);
+	U* min_y = new U[n];
+	U* max_y = new U[n];
+	U* upper = new U[n];
+	U* lower = new U[n];
 	
-	U* current = (U*)malloc(nbytes_y);
-	
+	U* current = new U[n];
 	
 	// copy data for computing running signal
-	U* running = (U*)malloc(nbytes_y);
+	U* running = new U[n];
 	copy(running, y, n);
 	
 	for (size_t i = 0; i < k-1; ++i) {
@@ -290,16 +287,16 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 	// save the residual
 	copy(&modes[(k-1)*n], running, n);
 	
-	
-	free(current);
-	free(running);
-	
-	free(min_x);
-	free(max_x);
-	free(min_y);
-	free(max_y);
-	free(upper);
-	free(lower);
+
+	// free memory
+	delete [] current;
+	delete [] running;
+	delete [] min_x;
+	delete [] max_x;
+	delete [] min_y;
+	delete [] max_y;
+	delete [] upper;
+	delete [] lower;
 }
 
 template <typename coord_t, typename real_t>
