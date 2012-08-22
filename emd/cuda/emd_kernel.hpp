@@ -350,7 +350,7 @@ __global__ void emd_strat(size_t wsize, size_t n, const coord_t* x, const real_t
 
 // each thread a down-sampling round.
 template <typename T, typename U>
-__global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, unsigned int* counts, size_t k, U* ensemble, size_t max_iter=10, unsigned long long seed=0) {
+__global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, unsigned int* counts, size_t k, U* ensemble, unsigned long long seed=0, size_t max_iter=10) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	// initialize random seed
@@ -376,17 +376,17 @@ __global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, un
 	// accumulate sum
 	for (size_t i = 0; i < k; ++i) {
 		for (size_t j = 0; j < ns; ++j) {
-			//ensemble[i*n + samples[j]] += modes[i*n + j];
-			//__threadfence();
-			atomicAdd(&ensemble[i*n + samples[j]], modes[i*ns + j]);
+			ensemble[i*n + samples[j]] += modes[i*ns + j];
+			__threadfence();
+			//atomicAdd(&ensemble[i*n + samples[j]], modes[i*ns + j]);
 		}
 	}
 	
 	// keep track of number of times each datum is sampled
 	for (size_t j = 0; j < ns; ++j) {
-		//++(counts[samples[j]]);
-		//__threadfence();
-		atomicAdd(&counts[samples[j]], 1);
+		++(counts[samples[j]]);
+		__threadfence();
+		//atomicAdd(&counts[samples[j]], 1);
 	}
 		
 	delete [] samples;
@@ -396,7 +396,6 @@ __global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, un
 	
 }
 
-//FIXME
 template <typename T, typename U>
 __global__ void scale(size_t n, size_t k, T* values, const U* factors) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -404,7 +403,6 @@ __global__ void scale(size_t n, size_t k, T* values, const U* factors) {
 		for (size_t i = 0; i < k; ++i) {
 			values[i*n + idx] /= factors[idx];
 		}
-		//values[idx] /= factors[idx];
 	}
 }
 
