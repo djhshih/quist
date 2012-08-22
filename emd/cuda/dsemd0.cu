@@ -21,8 +21,8 @@ int main(int argc, char* argv[]) {
 	unsigned *d_counts;
 	
 	const size_t N = 32 * 32;
-	const size_t ns = 32 * 32 / 4;
-	const size_t nr = 512;
+	const size_t ns = 32 * 32 / 2;
+	const size_t nr = 1024;
 	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
 	
 	//size_t k = log2((real_t)N) + 1;

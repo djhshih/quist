@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 	float *d_x, *d_y, *d_modes;
 	
 	const size_t N = 32 * 32;
-	const size_t wsize = 32 * 32 / 4;
+	const size_t wsize = 32 * 32 / 2;
 	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
 	
 	//size_t k = log2((float)N) + 1;

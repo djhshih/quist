@@ -132,21 +132,6 @@ __device__ void splint(size_t n, const T x[], const T a[], const T b[], T const 
 	*/
 template <typename T>
 __device__ void splint(size_t n, const T x[], const T y[], size_t nn, const T xx[], T yy[]) {
-	
-	/*
-	// thread 0 of each block allocates shared memory
-	__shared__ T* shared;
-	const size_t narrays = 3;
-	if (threadIdx.x == 0) {
-		shared = new T[narrays*n];
-	}
-	__syncthreads();
-	
-	T* b = &shared[0];
-	T* c = &shared[n];
-	T* d = &shared[2*n];
-	*/
-	
 	T* b = new T[n];
 	T* c = new T[n];
 	T* d = new T[n];
@@ -157,10 +142,6 @@ __device__ void splint(size_t n, const T x[], const T y[], size_t nn, const T xx
 	delete [] b;
 	delete [] c;
 	delete [] d;
-	
-	/*
-	delete [] shared;
-	*/
 }
 
 template <typename coord_t, typename real_t>
@@ -259,34 +240,21 @@ __device__ void copy(T dest[], const T src[], size_t n) {
 
 template <typename T, typename U>
 __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
-	
-	
-	// thread 0 of each block allocates shared memory
-	__shared__ U* shared;
-	const size_t narrays = 2;
-	if (threadIdx.x == 0) {
-		shared = new U[narrays*n];
-	}
-	__syncthreads();
-	
-	U* current = &shared[0];
-	U* running = &shared[n];
-	
-	/*
-	U* current = new U[n];
-	U* running = new U[n];
-	*/
-	
-	U* min_y = new U[n];
-	U* max_y = new U[n];
-	
-	U* upper = new U[n];
-	U* lower = new U[n];
-	
+
+	// allocate arrays for storing x and y values of extrema points, 
+	//   and upper and lower envelops
 	T* min_x = new T[n];
 	T* max_x = new T[n];
 	
+	U* min_y = new U[n];
+	U* max_y = new U[n];
+	U* upper = new U[n];
+	U* lower = new U[n];
+	
+	U* current = new U[n];
+	
 	// copy data for computing running signal
+	U* running = new U[n];
 	copy(running, y, n);
 	
 	for (size_t i = 0; i < k-1; ++i) {
@@ -375,14 +343,12 @@ template <typename coord_t, typename real_t>
 __global__ void emd_strat(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t k, real_t* modes, size_t max_iter=10) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t start = idx * wsize;
-	
-	
 	if (start < n) {
 		d_emd(n, wsize, &x[start], &y[start], k, &modes[start], max_iter);
 	}
 }
 
-// each thread processes a down-sampling round.
+// each thread a down-sampling round.
 template <typename T, typename U>
 __global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, unsigned int* counts, size_t k, U* ensemble, unsigned long long seed=0, size_t max_iter=10) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
