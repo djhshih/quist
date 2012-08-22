@@ -3,6 +3,7 @@
 #undef _GLIBCXX_USE_INT128
 
 #include <cstdio>
+#include <ctime>
 #include <cmath>
 
 #include "emd_kernel.hpp"
@@ -20,7 +21,7 @@ int main(int argc, char* argv[]) {
 	unsigned *d_counts;
 	
 	const size_t N = 32 * 32;
-	const size_t ns = 32 * 32 / 4;
+	const size_t ns = 32 * 32 / 2;
 	const size_t nr = 1024;
 	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
 	
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
 	for (size_t i = 0; i < N; i++) {
 		real_t x = (real_t)i/M_PI;
 		h_x[i] = x;
-		h_y[i] = sin(x) + 0.5 * sin(x/10);
+		h_y[i] = sin(x) + 0.5*sin(x/10) + 0.25*sin(x/100);
 	}
 	
 	// clear device output arrays
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(d_y, h_y, nbytes, cudaMemcpyHostToDevice);
 
 	// do calculate on device
-	dsemd <<< grid_dim, block_dim >>> (N, d_x, d_y, ns, nr, d_counts, k, d_modes, 1234);
+	dsemd <<< grid_dim, block_dim >>> (N, d_x, d_y, ns, nr, d_counts, k, d_modes);
 	scale <<< N, 1 >>> (N, k, d_modes, d_counts);
 
 	// retrieve results from device and store it in host array
@@ -74,7 +75,11 @@ int main(int argc, char* argv[]) {
 	
 	// compute gold standard
 	real_t** gold_modes = emd::emd(N, h_x, h_y, &k);
+	
+	//std::srand((unsigned)std::time(NULL));
 	//real_t** gold_modes = emd::dsemd(N, h_x, h_y, &k, ns, nr);
+	
+	//real_t** gold_modes = emd::eemd(N, h_x, h_y, &k, (real_t)0.05, 512);
 
 	// print results
 	for (size_t i = 0; i < k; ++i) {

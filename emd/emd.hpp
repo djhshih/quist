@@ -287,7 +287,7 @@ namespace emd {
 		}
 		
 		// allocate memory
-		U** ensemble = new_arrays(k, n, 0.0);
+		U** ensemble = new_arrays(k, n, (U)0.0);
 		
 		// calculate SD of data
 		U mean, sd;
