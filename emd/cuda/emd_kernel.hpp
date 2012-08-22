@@ -415,4 +415,13 @@ __global__ void minima_strat(size_t wsize, size_t n, const coord_t* x, const rea
 	}
 }
 
+template <typename coord_t, typename real_t>
+__global__ void maxima_strat(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t* kk, coord_t* xx, real_t* yy) {
+	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+	size_t start = idx * wsize;
+	if (start < n) {
+		maxima(wsize, &x[start], &y[start], &kk[idx], &xx[start], &yy[start]);
+	}
+}
+
 #endif
