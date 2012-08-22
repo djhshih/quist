@@ -14,9 +14,9 @@ using namespace std;
 int main(int argc, char* argv[]) {
 
 	float *h_x, *h_y, *h_modes;
-	size_t *h_counts;
+	unsigned *h_counts;
 	float *d_x, *d_y, *d_modes;
-	size_t *d_counts;
+	unsigned *d_counts;
 	
 	const size_t N = 32 * 32;
 	const size_t ns = 32 * 32 / 4;
@@ -32,13 +32,13 @@ int main(int argc, char* argv[]) {
 	
 	size_t nbytes = N * sizeof(float);
 	size_t nbytes_modes = k * N * sizeof(float);
-	size_t nbytes_counts = N * sizeof(size_t);
+	size_t nbytes_counts = N * sizeof(unsigned);
 	
 	// allocate array on host
 	h_x = (float*)malloc(nbytes);
 	h_y = (float*)malloc(nbytes);
 	h_modes = (float*)malloc(nbytes_modes);
-	h_counts = (size_t*)malloc(nbytes_counts);
+	h_counts = (unsigned*)malloc(nbytes_counts);
 	
 
 	// allocate array on device
@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
 	
 	// compute gold standard
 	float** gold_modes = emd::emd(N, h_x, h_y, &k);
+	//float** gold_modes = emd::dsemd(N, h_x, h_y, &k, ns, nr);
 
 	// print results
 	for (size_t i = 0; i < k; ++i) {

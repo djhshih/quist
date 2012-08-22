@@ -309,6 +309,8 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 	*/
 __device__ void downsample(size_t n, size_t ns, size_t idx[], curandState* rstate) {
 	
+	// sample one datum within each window
+	
 	if (n % ns == 0) {
 		
 		// simple down-sampling
@@ -348,7 +350,7 @@ __global__ void emd_strat(size_t wsize, size_t n, const coord_t* x, const real_t
 
 // each thread a down-sampling round.
 template <typename T, typename U>
-__global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, size_t* counts, size_t k, U* ensemble, size_t max_iter=10, unsigned long long seed=0) {
+__global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, unsigned int* counts, size_t k, U* ensemble, size_t max_iter=10, unsigned long long seed=0) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	// initialize random seed
@@ -370,20 +372,21 @@ __global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, si
 	
 	U* modes = new U[k*ns];
 	d_emd(ns, ns, x2, y2, k, modes, max_iter);
-		
+	
 	// accumulate sum
 	for (size_t i = 0; i < k; ++i) {
 		for (size_t j = 0; j < ns; ++j) {
-			ensemble[i*n + samples[j]] += modes[i*n + j];
-			__threadfence();
+			//ensemble[i*n + samples[j]] += modes[i*n + j];
+			//__threadfence();
+			atomicAdd(&ensemble[i*n + samples[j]], modes[i*ns + j]);
 		}
 	}
 	
 	// keep track of number of times each datum is sampled
 	for (size_t j = 0; j < ns; ++j) {
-		// NB  race condition in updating counts
-		++(counts[samples[j]]);
-		__threadfence();
+		//++(counts[samples[j]]);
+		//__threadfence();
+		atomicAdd(&counts[samples[j]], 1);
 	}
 		
 	delete [] samples;

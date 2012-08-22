@@ -385,7 +385,7 @@ namespace emd {
 		}
 		
 		// allocate memory
-		U** ensemble = new_arrays(k, n, 0.0);
+		U** ensemble = new_arrays(k, n, (U)0.0);
 		size_t* counts = new size_t[n];
 		for (size_t j = 0; j < n; ++j) {
 			counts[j] = 0;
