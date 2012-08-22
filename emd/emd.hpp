@@ -395,7 +395,7 @@ namespace emd {
 		
 			// allocate for down-sampled data points
 			size_t* idx = new size_t[ns];
-			T* x2 = new U[ns];
+			T* x2 = new T[ns];
 			U* y2 = new U[ns];
 		
 			downsample(n, ns, idx);

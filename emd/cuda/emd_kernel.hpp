@@ -1,6 +1,7 @@
 #ifndef emd_kernel_h
 #define emd_kernel_h
 
+#include <curand_kernel.h>
 
 /**
 	* Tridiagonal matrix solver.
@@ -235,7 +236,6 @@ __device__ void maxima(size_t n, const coord_t x[], const real_t y[], size_t* kk
 template <typename T>
 __device__ void copy(T dest[], const T src[], size_t n) {
 	memcpy((void*)dest, (const void*)src, n * sizeof(T));
-	//for (size_t i = 0; i < n; ++i) dest[i] = src[i];
 }
 
 template <typename T, typename U>
@@ -300,8 +300,45 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 	delete [] lower;
 }
 
+/**
+	* Down-sample.
+	* NB  last datum may never be sampled if population size is not a multiple of the sample size.
+	* @param n population size
+	* @param ns sample size (ns < n)
+	* @param idx output sampled index
+	*/
+__device__ void downsample(size_t n, size_t ns, size_t idx[], curandState* rstate) {
+	
+	if (n % ns == 0) {
+		
+		// simple down-sampling
+		size_t window_size = n / ns;
+		size_t wi = 0;
+		for (size_t i = 0; i < ns * window_size; i += window_size) {
+			size_t j = i + (curand(rstate) % window_size);
+			idx[wi++] = j;
+		}
+	
+	} else {
+		
+		// down-sampling using floating point boundaries
+		float window_size = n / (float)ns;
+		size_t wi = 0;
+		for (float i = 0; (size_t)i < n; i += window_size) {
+			// determine current window size
+			size_t start = (size_t)i;
+			size_t end = (size_t)(i + window_size);
+			size_t j = i + (curand(rstate) % (end - start));
+			idx[wi++] = j;
+		}
+		
+	}
+	
+}
+
+// each thread processes a window.
 template <typename coord_t, typename real_t>
-__global__ void emd_all(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t k, real_t* modes, size_t max_iter=10) {
+__global__ void emd_strat(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t k, real_t* modes, size_t max_iter=10) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t start = idx * wsize;
 	if (start < n) {
@@ -309,8 +346,67 @@ __global__ void emd_all(size_t wsize, size_t n, const coord_t* x, const real_t* 
 	}
 }
 
+// each thread a down-sampling round.
+template <typename T, typename U>
+__global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, size_t* counts, size_t k, U* ensemble, size_t max_iter=10, unsigned long long seed=0) {
+	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	// initialize random seed
+	curandState rstate;
+  curand_init(seed, idx, 0, &rstate);
+	
+	size_t* samples = new size_t[ns];
+	downsample(n, ns, samples, &rstate);
+	
+	// allocate for down-sampled data points
+	T* x2 = new T[ns];
+	U* y2 = new U[ns];
+	
+	// copy sampled data
+	for (size_t j = 0; j < ns; ++j) {
+		x2[j] = x[samples[j]];
+		y2[j] = y[samples[j]];
+	}
+	
+	U* modes = new U[k*ns];
+	d_emd(ns, ns, x2, y2, k, modes, max_iter);
+		
+	// accumulate sum
+	for (size_t i = 0; i < k; ++i) {
+		for (size_t j = 0; j < ns; ++j) {
+			ensemble[i*n + samples[j]] += modes[i*n + j];
+			__threadfence();
+		}
+	}
+	
+	// keep track of number of times each datum is sampled
+	for (size_t j = 0; j < ns; ++j) {
+		// NB  race condition in updating counts
+		++(counts[samples[j]]);
+		__threadfence();
+	}
+		
+	delete [] samples;
+	delete [] x2;
+	delete [] y2;
+	delete [] modes;
+	
+}
+
+//FIXME
+template <typename T, typename U>
+__global__ void scale(size_t n, size_t k, T* values, const U* factors) {
+	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx < n) {
+		for (size_t i = 0; i < k; ++i) {
+			values[i*n + idx] /= factors[idx];
+		}
+		//values[idx] /= factors[idx];
+	}
+}
+
 template <typename coord_t, typename real_t>
-__global__ void minima_all(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t* kk, coord_t* xx, real_t* yy) {
+__global__ void minima_strat(size_t wsize, size_t n, const coord_t* x, const real_t* y, size_t* kk, coord_t* xx, real_t* yy) {
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t start = idx * wsize;
 	if (start < n) {

@@ -1,4 +1,3 @@
-
 // hack to make nvcc work with gcc-4.7
 #undef _GLIBCXX_ATOMIC_BUILTINS
 #undef _GLIBCXX_USE_INT128
@@ -15,31 +14,38 @@ using namespace std;
 int main(int argc, char* argv[]) {
 
 	float *h_x, *h_y, *h_modes;
+	size_t *h_counts;
 	float *d_x, *d_y, *d_modes;
+	size_t *d_counts;
 	
 	const size_t N = 32 * 32;
-	const size_t wsize = 32 * 32 / 4;
+	const size_t ns = 32 * 32 / 4;
+	const size_t nr = 1024;
 	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
 	
 	//size_t k = log2((float)N) + 1;
 	size_t k = 4;
 	
 	dim3 block_dim = 1;
-	dim3 grid_dim = N / wsize / block_dim.x + (N%block_dim.x == 0 ? 0 : 1);
+	//dim3 grid_dim = N / wsize / block_dim.x + (N%block_dim.x == 0 ? 0 : 1);
+	dim3 grid_dim = nr;
 	
 	size_t nbytes = N * sizeof(float);
 	size_t nbytes_modes = k * N * sizeof(float);
+	size_t nbytes_counts = N * sizeof(size_t);
 	
 	// allocate array on host
 	h_x = (float*)malloc(nbytes);
 	h_y = (float*)malloc(nbytes);
-	
 	h_modes = (float*)malloc(nbytes_modes);
+	h_counts = (size_t*)malloc(nbytes_counts);
+	
 
 	// allocate array on device
 	cudaMalloc((void**) &d_x, nbytes);
 	cudaMalloc((void**) &d_y, nbytes);
 	cudaMalloc((void**) &d_modes, nbytes_modes);
+	cudaMalloc((void**) &d_counts, nbytes_counts);
 
 	// initialize host array
 	for (size_t i = 0; i < N; i++) {
@@ -50,6 +56,7 @@ int main(int argc, char* argv[]) {
 	
 	// clear device output arrays
 	cudaMemset(d_modes, 0, nbytes_modes);
+	cudaMemset(d_counts, 0, nbytes_counts);
 	
 	cudaThreadSynchronize();
 	
@@ -58,10 +65,19 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(d_y, h_y, nbytes, cudaMemcpyHostToDevice);
 
 	// do calculate on device
-	emd_strat <<< grid_dim, block_dim >>> (wsize, N, d_x, d_y, k, d_modes);
+	dsemd <<< grid_dim, block_dim >>> (N, d_x, d_y, ns, nr, d_counts, k, d_modes);
+	//scale <<< N, 1 >>> (N, k, d_modes, d_counts);
 
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_modes, d_modes, nbytes_modes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_counts, d_counts, nbytes_counts, cudaMemcpyDeviceToHost);
+	
+	// scale the ensemble values
+	for (size_t i = 0; i < k; ++i) {
+		for (size_t j = 0; j < N; ++j) {
+			h_modes[i*N + j] /= h_counts[j];
+		}
+	}
 	
 	// compute gold standard
 	float** gold_modes = emd::emd(N, h_x, h_y, &k);
@@ -69,7 +85,7 @@ int main(int argc, char* argv[]) {
 	// print results
 	for (size_t i = 0; i < k; ++i) {
 		for (size_t j = 0; j < N; ++j) {
-			printf("%d %d %f %f\n", i, j, h_modes[i*N + j], gold_modes[i][j]);
+			printf("%d %d %d %f %f\n", i, j, h_counts[j], h_modes[i*N + j], gold_modes[i][j]);
 		}
 	}
 	
@@ -83,10 +99,12 @@ int main(int argc, char* argv[]) {
 	free(h_x);
 	free(h_y);
 	free(h_modes);
+	free(h_counts);
 	
 	emd::free_arrays(gold_modes, k);
 	
 	cudaFree(d_x);
 	cudaFree(d_y);
 	cudaFree(d_modes);
+	cudaFree(d_counts);
 }
