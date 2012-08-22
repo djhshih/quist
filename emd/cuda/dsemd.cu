@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
 
 	// initialize host array
 	for (size_t i = 0; i < N; i++) {
-		real_t x = (real_t)i/M_PI;
+		real_t x = (real_t)i*2*M_PI;
 		h_x[i] = x;
-		h_y[i] = sin(x) + 0.5*sin(x/10) + 0.25*sin(x/100);
+		h_y[i] = sin(x/40) + 0.8*sin(x/200) + 0.6*sin(x/2000);
 	}
 	
 	// clear device output arrays
