@@ -2,6 +2,7 @@
 #define emd_kernel_h
 
 #include <curand_kernel.h>
+#include <boost/iterator/iterator_concepts.hpp>
 
 /**
 	* Tridiagonal matrix solver.
@@ -260,22 +261,15 @@ __device__ void copy(T dest[], const T src[], size_t n) {
 template <typename T, typename U>
 __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
 	
+	__shared__ U* current;
+	__shared__ U* running;
 	
 	// thread 0 of each block allocates shared memory
-	__shared__ U* shared;
-	const size_t narrays = 2;
 	if (threadIdx.x == 0) {
-		shared = new U[narrays*n];
+		current = new U[n];
+		running = new U[n];
 	}
 	__syncthreads();
-	
-	U* current = &shared[0];
-	U* running = &shared[n];
-	
-	/*
-	U* current = new U[n];
-	U* running = new U[n];
-	*/
 	
 	U* min_y = new U[n];
 	U* max_y = new U[n];
