@@ -124,7 +124,7 @@ namespace bla {
 		size_t ii = 0;
 		for (size_t i = 0; i < n-1; ++i) {
 			
-			// find starting index ii
+			// find starting index i
 			while (ii < nn && xx[ii] < x[i]) {
 				++i;
 			}

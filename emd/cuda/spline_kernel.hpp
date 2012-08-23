@@ -87,7 +87,6 @@ __global__ void ncspline_teardown(size_t n, const T* x, const T* y, const T* c, 
 	
 }
 
-// FIXME
 /**
 	* Spline interpolation.
 	* @param n number of fitted data points
@@ -101,12 +100,12 @@ __global__ void ncspline_teardown(size_t n, const T* x, const T* y, const T* c, 
 	* @param yy output interpolated values
 	*/
 template <typename T>
-__global__ void splint(size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, size_t nn, const T* xx, T* yy) {
+__global__ void splint_single(size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, size_t nn, const T* xx, T* yy) {
 
 	size_t ii = 0;
 	for (size_t i = 0; i < n-1; ++i) {
 		
-		// find starting index ii
+		// find starting index i
 		while (ii < nn && xx[ii] < x[i]) {
 			++i;
 		}
@@ -118,6 +117,52 @@ __global__ void splint(size_t n, const T* x, const T* a, const T* b, const T* c,
 		}
 
 		if (ii >= nn) break;
+	}
+
+}
+
+template <typename T>
+__global__ void splint_linear_search(const size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, const size_t nn, const T* xx, T* yy) {
+	
+	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+	T xc = x[i], xn = x[i+1];
+
+	size_t ii = nn-1;
+		
+	// find index ii that is just before the starting index
+	while (xx[ii] > xc) {
+		--ii;
+	}
+	++ii;
+	
+	// interpolate until the next spline
+	while (ii < nn && xx[ii] <= xn) {
+		T t = xx[ii] - xc;
+		yy[ii++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
+	}
+
+}
+
+template <typename T>
+__global__ void splint_binary_search(const size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, const size_t nn, const T* xx, T* yy) {
+	
+	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+	T xc = x[i], xn = x[i+1];
+
+	size_t jl = 0, jr = nn-1, j;
+		
+	// find starting index j by binary search
+	while (jr - jl > 1) {
+		j = (jr + jl) / 2;
+		if (xx[j] >= xc) jr = j;
+		else jl = j;
+	}
+	j = jl;
+	
+	// interpolate until the next spline
+	while (j < nn && xx[j] <= xn) {
+		T t = xx[j] - xc;
+		yy[j++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
 	}
 
 }

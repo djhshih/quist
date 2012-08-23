@@ -24,9 +24,9 @@ int main(int argc, char* argv[]) {
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_b, *d_c, *d_d;
 	
 	const size_t stride = 32;
-	const size_t N = 4096, nn = (N-1) * stride;
+	const size_t N = 32, nn = (N-1) * stride;
 	
-	dim3 block_dim = 128;
+	dim3 block_dim = 4;
 	dim3 grid_dim = N / block_dim.x + (N % block_dim.x == 0 ? 0 : 1);
 	
 	size_t nbytes = N * sizeof(real_t);
@@ -75,22 +75,21 @@ int main(int argc, char* argv[]) {
 	cudaThreadSynchronize();
 	ncspline_teardown <<< grid_dim, block_dim >>> (N, d_x, d_y, d_c, d_b, d_d);
 	cudaThreadSynchronize();
-	splint <<< 1, 1 >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
+	splint_single <<< 1, 1 >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
+	splint_linear_search <<< grid_dim, block_dim >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
+	splint_binary_search <<< grid_dim, block_dim >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
 
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_yy, d_yy, nbytes_nn, cudaMemcpyDeviceToHost);
 	
-	
 	// compute gold standard
 	real_t* h_yy_gold = new real_t[nn];
-	/*
 	bla::splint(N, h_x, h_y, nn, h_xx, h_yy_gold);
 	
 	// print results
 	for (size_t i = 0; i < nn; ++i) {
 		printf("%d %f %f\n", i, h_yy[i], h_yy_gold[i]);
 	}
-	*/
 	
 	cudaError_t code = cudaGetLastError();
 	if (code != cudaSuccess) {
