@@ -76,8 +76,9 @@ __global__ void ncspline_teardown(size_t n, const T* x, const T* y, const T* c, 
 	
 	if (i < n-1) {
 		T hc = x[i+1] - x[i];
-		b[i] = (y[i+1] - y[i]) / hc  -  hc * (2*c[i] + c[i+1]) / 3;
-		d[i] = (c[i+1] - c[i]) / (3 * hc);
+		T cc = c[i], cn = c[i+1];
+		b[i] = (y[i+1] - y[i]) / hc  -  hc * (2*cc + cn) / 3;
+		d[i] = (cn - cc) / (3 * hc);
 	} else {
 		// b[n-1] and d[n-1] are not calculated
 		b[i] = 0;

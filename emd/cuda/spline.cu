@@ -24,9 +24,9 @@ int main(int argc, char* argv[]) {
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_b, *d_c, *d_d;
 	
 	const size_t stride = 32;
-	const size_t N = 32, nn = (N-1) * stride;
+	const size_t N = 4096, nn = (N-1) * stride;
 	
-	dim3 block_dim = 4;
+	dim3 block_dim = 128;
 	dim3 grid_dim = N / block_dim.x + (N % block_dim.x == 0 ? 0 : 1);
 	
 	size_t nbytes = N * sizeof(real_t);
@@ -61,12 +61,12 @@ int main(int argc, char* argv[]) {
 	}
 	
 	// clear device output arrays
-	cudaMemset(d_yy, 0, nbytes_nn);
+	//cudamemset(d_yy, 0, nbytes_nn);
 	
 	// copy data to device
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_y, h_y, nbytes, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_xx, h_xx, nbytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_xx, h_xx, nbytes_nn, cudaMemcpyHostToDevice);
 
 	// do calculation on device
 	ncspline_setup <<< grid_dim, block_dim >>> (N, d_x, d_y, d_sub, d_main, d_sup, d_r);
@@ -83,12 +83,14 @@ int main(int argc, char* argv[]) {
 	
 	// compute gold standard
 	real_t* h_yy_gold = new real_t[nn];
+	/*
 	bla::splint(N, h_x, h_y, nn, h_xx, h_yy_gold);
 	
 	// print results
 	for (size_t i = 0; i < nn; ++i) {
 		printf("%d %f %f\n", i, h_yy[i], h_yy_gold[i]);
 	}
+	*/
 	
 	cudaError_t code = cudaGetLastError();
 	if (code != cudaSuccess) {
