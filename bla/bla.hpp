@@ -94,7 +94,8 @@ namespace bla {
 			b[i] = (y[i+1] - y[i]) / h[i]  -  h[i] * (2*c[i] + c[i+1]) / 3;
 			d[i] = (c[i+1] - c[i]) / (3 * h[i]);
 		}
-		// b[n-1] and c[n-1] are not calculated
+		// b[n-1] and d[n-1] are not calculated
+		b[n-1] = d[n-1] = 0;
 		
 		// free memory
 		delete [] h;
@@ -118,7 +119,7 @@ namespace bla {
 	 * @param yy output interpolated values
 	 */
 	template <typename T>
-	void splint(size_t n, const T x[], const T a[], const T b[], T const c[], const T d[], size_t nn, const T xx[], T yy[]) {
+	void splint(size_t n, const T x[], const T a[], const T b[], const T c[], const T d[], size_t nn, const T xx[], T yy[]) {
 
 		size_t ii = 0;
 		for (size_t i = 0; i < n-1; ++i) {

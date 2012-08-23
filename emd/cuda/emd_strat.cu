@@ -20,6 +20,8 @@ int main(int argc, char* argv[]) {
 	const size_t N = 32 * 32;
 	const size_t wsize = 32 * 32 / 4;
 	// note: when the window size is too small (i.e. does not contain enough extrema), IMF cannot be extracted
+	// low frequency signals restrict window size
+	// signal frequency does not depend on data size   =>   cannot use more layers for more data!
 	
 	//size_t k = log2((float)N) + 1;
 	size_t k = 4;
@@ -43,9 +45,9 @@ int main(int argc, char* argv[]) {
 
 	// initialize host array
 	for (size_t i = 0; i < N; i++) {
-		float x = (float)i/M_PI;
+		float x = (float)i*2*M_PI;
 		h_x[i] = x;
-		h_y[i] = sin(x) + 0.5 * sin(x/10);
+		h_y[i] = sin(x/40) + 0.8*sin(x/200) + 0.6*sin(x/2000);
 	}
 	
 	// clear device output arrays

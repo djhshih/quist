@@ -2,7 +2,6 @@
 #define emd_kernel_h
 
 #include <curand_kernel.h>
-#include <boost/iterator/iterator_concepts.hpp>
 
 /**
 	* Tridiagonal matrix solver.
@@ -100,7 +99,7 @@ __device__ void ncspline(size_t n, const T x[], const T y[], T b[], T c[], T d[]
 	* @param yy output interpolated values
 	*/
 template <typename T>
-__device__ void splint(size_t n, const T x[], const T a[], const T b[], T const c[], const T d[], size_t nn, const T xx[], T yy[]) {
+__device__ void splint(size_t n, const T x[], const T a[], const T b[], const T c[], const T d[], size_t nn, const T xx[], T yy[]) {
 
 	size_t ii = 0;
 	for (size_t i = 0; i < n-1; ++i) {
@@ -258,9 +257,24 @@ __device__ void copy(T dest[], const T src[], size_t n) {
 	memcpy((void*)dest, (const void*)src, n * sizeof(T));
 }
 
+template <typename T>
+__device__ void copy_stride_src(T dest[], const T src[], size_t n, size_t stride) {
+	for (size_t i = 0; i < n; ++i) {
+		dest[i] = src[i*stride];
+	}
+}
+
+template <typename T>
+__device__ void copy_stride_dest(T dest[], const T src[], size_t n, size_t stride) {
+	for (size_t i = 0; i < n; ++i) {
+		dest[i*stride] = src[i];
+	}
+}
+
 template <typename T, typename U>
 __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
 	
+	/*
 	__shared__ U* current;
 	__shared__ U* running;
 	
@@ -270,15 +284,23 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 		running = new U[n];
 	}
 	__syncthreads();
+	*/
 	
-	U* min_y = new U[n];
-	U* max_y = new U[n];
+	U* current = new U[n];
+	U* running = new U[n];
+	
+	// max number of local maxima/minima occurs when every other point is a maximum/minimum,
+	// plus the first and last points
+	// therefore, the max number of local maxima/minima is n/2 + 1
+	
+	U* min_y = new U[n/2 + 1];
+	U* max_y = new U[n/2 + 1];
 	
 	U* upper = new U[n];
 	U* lower = new U[n];
 	
-	T* min_x = new T[n];
-	T* max_x = new T[n];
+	T* min_x = new T[n/2 + 1];
+	T* max_x = new T[n/2 + 1];
 	
 	// copy data for computing running signal
 	copy(running, y, n);
@@ -313,6 +335,85 @@ __device__ void d_emd(size_t N, size_t n, const T x[], const U y[], size_t k, U*
 	
 	// save the residual
 	copy(&modes[(k-1)*N], running, n);
+	
+
+	// free memory
+	delete [] current;
+	delete [] running;
+	delete [] min_x;
+	delete [] max_x;
+	delete [] min_y;
+	delete [] max_y;
+	delete [] upper;
+	delete [] lower;
+}
+
+template <typename T, typename U>
+__device__ void d_emd_stride(size_t N, size_t stride, const T x[], const U y[], size_t k, U* modes, size_t max_iter=10) {
+	
+	size_t n = N / stride;
+	
+	/*
+	__shared__ U* current;
+	__shared__ U* running;
+	
+	// thread 0 of each block allocates shared memory
+	if (threadIdx.x == 0) {
+		current = new U[n];
+		running = new U[n];
+	}
+	__syncthreads();
+	*/
+	
+	U* current = new U[n];
+	U* running = new U[n];
+	
+	// max number of local maxima/minima occurs when every other point is a maximum/minimum,
+	// plus the first and last points
+	// therefore, the max number of local maxima/minima is n/2 + 1
+	
+	U* min_y = new U[n/2 + 1];
+	U* max_y = new U[n/2 + 1];
+	
+	U* upper = new U[n];
+	U* lower = new U[n];
+	
+	T* min_x = new T[n/2 + 1];
+	T* max_x = new T[n/2 + 1];
+	
+	// copy data for computing running signal
+	copy_stride_src(running, y, n, stride);
+	
+	for (size_t i = 0; i < k-1; ++i) {
+		copy(current, running, n);
+		
+		for (size_t j = 0; j < max_iter; ++j) {
+			// find extrema
+			size_t n_max, n_min;
+			maxima(n, x, current, &n_max, max_x, max_y);
+			minima(n, x, current, &n_min, min_x, min_y);
+			
+			// compute upper and lower envelops
+			splint(n_max, max_x, max_y, n, x, upper);
+			splint(n_min, min_x, min_y, n, x, lower);
+			
+			// substract the mean
+			for (size_t ii = 0; ii < n; ++ii) {
+				current[ii] -= (upper[ii] + lower[ii]) / 2;
+			}
+		}
+		
+		// save current intrinsic mode
+		copy_stride_dest(&modes[i*N], current, n, stride);
+		
+		// update running signal
+		for (size_t ii = 0; ii < n; ++ii) {
+			running[ii] -= current[ii];
+		}
+	}
+	
+	// save the residual
+	copy_stride_dest(&modes[(k-1)*N], running, n, stride);
 	
 
 	// free memory
@@ -370,9 +471,18 @@ __global__ void emd_strat(size_t wsize, size_t n, const coord_t* x, const real_t
 	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t start = idx * wsize;
 	
-	
 	if (start < n) {
 		d_emd(n, wsize, &x[start], &y[start], k, &modes[start], max_iter);
+	}
+}
+
+// threads process interleaved elements
+template <typename coord_t, typename real_t>
+__global__ void emd_interl(size_t nlayers, size_t n, const coord_t* x, const real_t* y, size_t k, real_t* modes, size_t max_iter=10) { 
+	size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (idx < n) {
+		d_emd_stride(n, nlayers, &x[idx], &y[idx], k, &modes[idx], max_iter);
 	}
 }
 
@@ -404,17 +514,13 @@ __global__ void dsemd(size_t n, const T* x, const U* y, size_t ns, size_t nr, un
 	// accumulate sum
 	for (size_t i = 0; i < k; ++i) {
 		for (size_t j = 0; j < ns; ++j) {
-			ensemble[i*n + samples[j]] += modes[i*ns + j];
-			__threadfence();
-			//atomicAdd(&ensemble[i*n + samples[j]], modes[i*ns + j]);
+			atomicAdd(&ensemble[i*n + samples[j]], modes[i*ns + j]);
 		}
 	}
 	
 	// keep track of number of times each datum is sampled
 	for (size_t j = 0; j < ns; ++j) {
-		++(counts[samples[j]]);
-		__threadfence();
-		//atomicAdd(&counts[samples[j]], 1);
+		atomicAdd(&counts[samples[j]], 1);
 	}
 		
 	delete [] samples;
