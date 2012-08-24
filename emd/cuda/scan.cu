@@ -56,10 +56,18 @@ int main(int argc, char* argv[]) {
 	Adder<real_t> adder;
 	
 	// do calculation on device
+	
+	// elements are divided into blocks
+	// each thread processes two elements within a block
 	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, adder);
-	// each thread processes a scan block from above
+	
+	// one block; each thread processes a scan block from above
 	aggregate_block_sum <<< 1, grid_dim >>> (elemPerBlock, d_y, d_block_x);
+	
+	// one block; each thread processes two scan block sums (hence need half the number of scan blocks from previous run)
 	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, adder);
+	
+	// each thread processes one element in original data
 	// need twice as many blocks as before, since each thread now processes one element
 	add_block_cumsum <<< grid_dim.x*2, block_dim >>> (N, d_block_y, d_y, adder);
 

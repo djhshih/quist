@@ -8,6 +8,10 @@ struct Adder {
 	__device__ __host__ T operator()(T a, T b) const {
 		return a + b;
 	}
+	// identity
+	__device__ __host__ T operator()() const {
+		return 0;
+	}
 };
 
 
@@ -42,8 +46,8 @@ __global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp) {
 		offset *= 2;
 	}
 	
-	// clear the last element (to be propagated back to position 0)
-	if (i == 0) shared[n-1 + CONFLICT_FREE_OFFSET(n-1)] = 0;
+	// replace the last element with identity (to be propagated back to position 0)
+	if (i == 0) shared[n-1 + CONFLICT_FREE_OFFSET(n-1)] = binaryOp();
 	
 	// traverse down tree and build scan
 	for (size_t d = 1; d < n; d *= 2) {
