@@ -54,22 +54,23 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
 	
 	Adder<real_t> adder;
+	ScalarSetter<real_t> setter;
 	
 	// do calculation on device
 	
 	// elements are divided into blocks
 	// each thread processes two elements within a block
-	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, adder);
+	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, adder, setter);
 	
 	// one block; each thread processes a scan block from above
 	aggregate_block_sum <<< 1, grid_dim >>> (elemPerBlock, d_y, d_block_x);
 	
 	// one block; each thread processes two scan block sums (hence need half the number of scan blocks from previous run)
-	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, adder);
+	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, adder, setter);
 	
 	// each thread processes one element in original data
 	// need twice as many blocks as before, since each thread now processes one element
-	add_block_cumsum <<< grid_dim.x*2, block_dim >>> (N, d_block_y, d_y, adder);
+	add_block_cumsum <<< grid_dim.x*2, block_dim >>> (N, d_block_y, d_y, adder, setter);
 
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_y, d_y, nbytes, cudaMemcpyDeviceToHost);
