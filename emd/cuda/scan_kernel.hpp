@@ -2,15 +2,12 @@
 #define NUM_BANKS 32
 #define LOG_NUM_BANKS 5
 #define CONFLICT_FREE_OFFSET(n)  ((n) >> NUM_BANKS + (n) >> (2 * LOG_NUM_BANKS))  
+#include <boost/concept_check.hpp>
 
 template <typename T>
-struct Adder {
-	__device__ __host__ T operator()(T a, T b) const {
-		return a + b;
-	}
-	// identity
-	__device__ __host__ T operator()() const {
-		return 0;
+struct ScalarAdder {
+	__device__ __host__ void operator()(T& a, const T& b) const {
+		a += b;
 	}
 };
 
@@ -21,9 +18,32 @@ struct ScalarSetter {
 	}
 };
 
+template <typename T>
+struct ArrayAdder {
+	ArrayAdder(size_t n): _n(n) {}
+	__device__ __host__ void operator()(T& a, const T& b) const {
+		T *pa = &a, *pb = &b;
+		for (size_t i = 0; i < _n; ++i) {
+			*(pa++) += *(pb++);
+		}
+	}
+	private:
+		size_t _n;
+};
+
+template <typename T>
+struct ArraySetter {
+	ArraySetter(size_t n) : _n(n) {}
+	__device__ __host__ void operator()(T& a, const T& b) const {
+		memcpy(&a, &b, sizeof(T)*_n);
+	}
+	private:
+		size_t _n;
+};
+
 
 template <typename T, typename BinaryOp, typename Setter >
-__global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp, Setter copy) {
+__global__ void prescan(size_t n, const T* x, T* y, T identity, BinaryOp binaryOp, Setter copy) {
 	extern __shared__ T shared[];
 	
 	size_t i = threadIdx.x;
@@ -48,13 +68,13 @@ __global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp, Setter co
 			size_t bi = offset * (2*i+2) - 1;
 			ai += CONFLICT_FREE_OFFSET(ai);
 			bi += CONFLICT_FREE_OFFSET(bi);
-			copy(shared[bi],  binaryOp(shared[bi], shared[ai]));
+			binaryOp(shared[bi], shared[ai]);
 		}
 		offset *= 2;
 	}
 	
 	// replace the last element with identity (to be propagated back to position 0)
-	if (i == 0) copy(shared[n-1 + CONFLICT_FREE_OFFSET(n-1)], binaryOp());
+	if (i == 0) copy(shared[n-1 + CONFLICT_FREE_OFFSET(n-1)], identity);
 	
 	// traverse down tree and build scan
 	for (size_t d = 1; d < n; d *= 2) {
@@ -68,7 +88,7 @@ __global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp, Setter co
 			T t;
 			copy(t, shared[ai]);
 			copy(shared[ai], shared[bi]);
-			copy(shared[bi], binaryOp(shared[bi], t));
+			binaryOp(shared[bi], t);
 		}
 	}
 	
@@ -84,7 +104,8 @@ __global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp, Setter co
 		// thread writing to second last element of block also writes result for last element
 		++j;
 		if ((j+1) % n == 0) {
-			copy(y[j], binaryOp(shared[ai + bankOffsetA], x[j]));
+			copy(y[j], shared[ai + bankOffsetA]);
+			binaryOp(y[j], x[j]);
 		}
 	}
 
@@ -94,14 +115,15 @@ __global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp, Setter co
 		// thread writing to second last element of block also writes result for last element
 		++j;
 		if ((j+1) % n == 0) {
-			copy(y[j], binaryOp(shared[bi + bankOffsetB], x[j]));
+			copy(y[j], shared[bi + bankOffsetB]);
+			binaryOp(y[j], x[j]);
 		}
 	}
 }
 
-template <typename T>
-__global__ void aggregate_block_sum(size_t block_size, const T* y, T* out) {
-	out[threadIdx.x] = y[(threadIdx.x+1) * block_size - 1];
+template <typename T, typename Setter>
+__global__ void aggregate_block_sum(size_t block_size, const T* y, T* out, Setter copy) {
+	copy(out[threadIdx.x], y[(threadIdx.x+1) * block_size - 1]);
 }
 
 template <typename T, typename BinaryOp, typename Setter >
@@ -110,6 +132,6 @@ __global__ void add_block_cumsum(size_t n, const T* blocks, T* y, BinaryOp binar
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t j = i / (2*blockDim.x);
 	if (j > 0) {
-		copy(y[i], binaryOp(y[i], blocks[j-1]));
+		binaryOp(y[i], blocks[j-1]);
 	}
 }

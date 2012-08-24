@@ -23,6 +23,7 @@ int main(int argc, char* argv[]) {
 	// since O(N) shared memory is used, the application will likely be memory-bound
 	
 	const size_t N = 2048;
+	const size_t m = 4;
 	
 	size_t elemPerBlock = 128;
 	
@@ -53,20 +54,21 @@ int main(int argc, char* argv[]) {
 	// copy data to device
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
 	
-	Adder<real_t> adder;
+	ScalarAdder<real_t> adder;
 	ScalarSetter<real_t> setter;
+	real_t identity(0);
 	
 	// do calculation on device
 	
 	// elements are divided into blocks
 	// each thread processes two elements within a block
-	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, adder, setter);
+	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, identity, adder, setter);
 	
 	// one block; each thread processes a scan block from above
-	aggregate_block_sum <<< 1, grid_dim >>> (elemPerBlock, d_y, d_block_x);
+	aggregate_block_sum <<< 1, grid_dim >>> (elemPerBlock, d_y, d_block_x, setter);
 	
 	// one block; each thread processes two scan block sums (hence need half the number of scan blocks from previous run)
-	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, adder, setter);
+	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, identity, adder, setter);
 	
 	// each thread processes one element in original data
 	// need twice as many blocks as before, since each thread now processes one element
@@ -79,9 +81,10 @@ int main(int argc, char* argv[]) {
 	
 	// compute gold standard
 	real_t* h_gold = new real_t[N];
-	h_gold[0] = h_x[0];
+	setter(h_gold[0], h_x[0]);
 	for (size_t i = 1; i < N; ++i) {
-		h_gold[i] = adder(h_gold[i-1], h_x[i]);
+		setter(h_gold[i], h_gold[i-1]);
+		adder(h_gold[i], h_x[i]);
 	}
 	
 	// print results
