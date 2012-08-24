@@ -7,6 +7,7 @@
 
 #include "scan_kernel.hpp"
 
+
 using namespace std;
 
 typedef float real_t;
@@ -51,14 +52,16 @@ int main(int argc, char* argv[]) {
 	
 	// copy data to device
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
-
+	
+	Adder<real_t> adder;
+	
 	// do calculation on device
-	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y);
+	prescan <<< grid_dim, block_dim, elemPerBlock*sizeof(real_t) >>> (elemPerBlock, d_x, d_y, adder);
 	// each thread processes a scan block from above
 	aggregate_block_sum <<< 1, grid_dim >>> (elemPerBlock, d_y, d_block_x);
-	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y);
+	prescan <<< 1, grid_dim.x/2, grid_dim.x*sizeof(real_t) >>> (grid_dim.x, d_block_x, d_block_y, adder);
 	// need twice as many blocks as before, since each thread now processes one element
-	add_block_cumsum <<< grid_dim.x*2, block_dim >>> (N, d_block_y, d_y);
+	add_block_cumsum <<< grid_dim.x*2, block_dim >>> (N, d_block_y, d_y, adder);
 
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_y, d_y, nbytes, cudaMemcpyDeviceToHost);
@@ -69,7 +72,7 @@ int main(int argc, char* argv[]) {
 	real_t* h_gold = new real_t[N];
 	h_gold[0] = h_x[0];
 	for (size_t i = 1; i < N; ++i) {
-		h_gold[i] = h_gold[i-1] + h_x[i];
+		h_gold[i] = adder(h_gold[i-1], h_x[i]);
 	}
 	
 	// print results

@@ -4,7 +4,15 @@
 #define CONFLICT_FREE_OFFSET(n)  ((n) >> NUM_BANKS + (n) >> (2 * LOG_NUM_BANKS))  
 
 template <typename T>
-__global__ void prescan(size_t n, const T* x, T* y) {
+struct Adder {
+	__device__ __host__ T operator()(T a, T b) const {
+		return a + b;
+	}
+};
+
+
+template <typename T, typename BinaryOp >
+__global__ void prescan(size_t n, const T* x, T* y, BinaryOp binaryOp) {
 	extern __shared__ T shared[];
 	
 	size_t i = threadIdx.x;
@@ -29,7 +37,7 @@ __global__ void prescan(size_t n, const T* x, T* y) {
 			size_t bi = offset * (2*i+2) - 1;
 			ai += CONFLICT_FREE_OFFSET(ai);
 			bi += CONFLICT_FREE_OFFSET(bi);
-			shared[bi] += shared[ai];
+			shared[bi] = binaryOp(shared[bi], shared[ai]);
 		}
 		offset *= 2;
 	}
@@ -48,7 +56,7 @@ __global__ void prescan(size_t n, const T* x, T* y) {
 			bi += CONFLICT_FREE_OFFSET(bi);
 			T t = shared[ai];
 			shared[ai] = shared[bi];
-			shared[bi] += t;
+			shared[bi] = binaryOp(shared[bi], t);
 		}
 	}
 	
@@ -64,7 +72,7 @@ __global__ void prescan(size_t n, const T* x, T* y) {
 		// thread writing to second last element of block also writes result for last element
 		++j;
 		if ((j+1) % (blockDim.x*2) == 0) {
-			y[j] = shared[ai + bankOffsetA] + x[j];
+			y[j] = binaryOp(shared[ai + bankOffsetA], x[j]);
 		}
 	}
 
@@ -74,23 +82,22 @@ __global__ void prescan(size_t n, const T* x, T* y) {
 		// thread writing to second last element of block also writes result for last element
 		++j;
 		if ((j+1) % (blockDim.x*2) == 0) {
-			y[j] = shared[bi + bankOffsetB] + x[j];
+			y[j] = binaryOp(shared[bi + bankOffsetB], x[j]);
 		}
 	}
 }
 
 template <typename T>
 __global__ void aggregate_block_sum(size_t block_size, const T* y, T* out) {
-	size_t j = (threadIdx.x+1) * block_size - 1;
-	out[threadIdx.x] = y[j];
+	out[threadIdx.x] = y[(threadIdx.x+1) * block_size - 1];
 }
 
-template <typename T>
-__global__ void add_block_cumsum(size_t n, const T* blocks, T* y) {
+template <typename T, typename BinaryOp >
+__global__ void add_block_cumsum(size_t n, const T* blocks, T* y, BinaryOp binaryOp) {
 	// since inclusive scan was calculated, don't modify elements within first block
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t j = i / (2*blockDim.x);
 	if (j > 0) {
-		y[i] += blocks[j-1];
+		y[i] = binaryOp(y[i], blocks[j-1]);
 	}
 }
