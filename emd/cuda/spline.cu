@@ -70,13 +70,10 @@ int main(int argc, char* argv[]) {
 
 	// do calculation on device
 	ncspline_setup <<< grid_dim, block_dim >>> (N, d_x, d_y, d_sub, d_main, d_sup, d_r);
-	cudaThreadSynchronize();
 	tridiag <<< 1, 1 >>> (N, d_sub, d_main, d_sup, d_r, d_c);
-	cudaThreadSynchronize();
 	ncspline_teardown <<< grid_dim, block_dim >>> (N, d_x, d_y, d_c, d_b, d_d);
-	cudaThreadSynchronize();
-	splint_single <<< 1, 1 >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
-	splint_linear_search <<< grid_dim, block_dim >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
+	//splint_single <<< 1, 1 >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
+	//splint_linear_search <<< grid_dim, block_dim >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
 	splint_binary_search <<< grid_dim, block_dim >>> (N, d_x, d_y, d_b, d_c, d_d, nn, d_xx, d_yy);
 
 	// retrieve results from device and store it in host array
