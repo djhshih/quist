@@ -25,11 +25,11 @@ int main(int argc, char* argv[]) {
 	// assume N < 2^22
 	// since O(N) shared memory is used, the application will likely be memory-bound
 	
-	const size_t N = 64;
+	const size_t N = 512;
 	const size_t mat_dim = 3;
 	const size_t m = mat_dim * mat_dim;
 	
-	size_t elemPerBlock = 4;
+	size_t elemPerBlock = 128;
 	
 	dim3 block_dim = elemPerBlock / 2;
 	dim3 grid_dim = N / elemPerBlock + (N % elemPerBlock == 0 ? 0 : 1);

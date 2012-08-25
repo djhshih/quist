@@ -28,19 +28,29 @@ __global__ void rd_tridiag(size_t n, const T* C, T* x) {
 	const size_t C_nelem = 9;
 	size_t offset;
 	
-	if (i == 0) {
+	// let first thread of every block calculate x0 and put it in shared memory
+	__shared__ T x0[1];
+	
+	if (threadIdx.x == 0) {
 		
 		offset = (n-1) * C_nelem;
-		x[0] = - C[offset+2] / C[offset];
+		x0[0] = - C[offset+2] / C[offset];
 		
-		// ensure X0 is updated for all threads
-		__threadfence();
-		
-	} else {
+	}
 	
-		offset = (i-1) * C_nelem;
-		x[i] = C[offset] * x[0] + C[offset+2];
+	// ensure X0 is updated for all threads within a block
+	//__threadfence();
+	__syncthreads();
+	
+	if (i == 0) {
+		x[i] = x0[0];
+	}
+	offset = (i-1) * C_nelem;
+	x[i-1] = C[offset+3] * x0[0] + C[offset+5];
 		
+	if (i == n-1) {
+		offset = (i-1) * C_nelem;
+		x[i] = C[offset] * x0[0] + C[offset+2];
 	}
 }
 
