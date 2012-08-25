@@ -23,7 +23,8 @@ int main(int argc, char* argv[]) {
 	// since O(N) shared memory is used, the application will likely be memory-bound
 	
 	const size_t N = 64;
-	const size_t m = 9;
+	const size_t mat_dim = 3;
+	const size_t m = mat_dim * mat_dim;
 	
 	size_t elemPerBlock = 4;
 	
@@ -58,10 +59,10 @@ int main(int argc, char* argv[]) {
 	//ScalarSetter<real_t> setter;
 	//ArrayAdder<real_t> adder(m);
 	//ArraySetter<real_t> setter(m);
-	Matrix33Multipler<real_t> adder;
-	Matrix33Setter<real_t> setter;
-	//MatrixMultipler<real_t> adder(3);
-	//MatrixSetter<real_t> setter(3);
+	StaticMatrixMultipler<real_t, mat_dim> adder;
+	StaticMatrixSetter<real_t, mat_dim> setter;
+	//MatrixMultipler<real_t> adder(mat_dim);
+	//MatrixSetter<real_t> setter(mat_dim);
 	
 	// do calculation on device
 	

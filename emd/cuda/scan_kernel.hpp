@@ -110,46 +110,47 @@ private:
  * Mulitpler for 3x3 matrix
  * Prefix
  */
-template <typename T>
-struct Matrix33Multipler {
+template <typename T, size_t n>
+struct StaticMatrixMultipler {
 	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
 		const T* pa = &a;
 		T* pb = &b;
-		T pc[9];
-		memset(pc, 0, sizeof(T)*9);
+		T pc[n*n];
+		memset(pc, 0, sizeof(T)*n*n);
 		
 		if (reversed) {
-			for (size_t i = 0; i < 3; ++i) {
-				for (size_t k = 0; k < 3; ++k) {
-					for (size_t j = 0; j < 3; ++j) {
-						pc[i*3+j] += pb[i*3+k]*pa[k*3+j];
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t k = 0; k < n; ++k) {
+					for (size_t j = 0; j < n; ++j) {
+						pc[i*3+j] += pb[i*n+k]*pa[k*n+j];
 					}
 				}
 			}
 		} else {
-			for (size_t i = 0; i < 3; ++i) {
-				for (size_t k = 0; k < 3; ++k) {
-					for (size_t j = 0; j < 3; ++j) {
-						pc[i*3+j] += pa[i*3+k]*pb[k*3+j];
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t k = 0; k < n; ++k) {
+					for (size_t j = 0; j < n; ++j) {
+						pc[i*n+j] += pa[i*n+k]*pb[k*n+j];
 					}
 				}
 			}
 		}
-		memcpy(pb, pc, sizeof(T)*9);
+		memcpy(pb, pc, sizeof(T)*n*n);
 	}
 	// set to identity
 	__device__ __host__ void operator()(T& a) const {
 		T* pa = &a;
-		memset(&pa[1], 0, sizeof(T)*7);
-		//pa[1] = pa[2] = pa[3] = pa[5] = pa[6] = pa[7] = 0;
-		pa[0] = pa[4] = pa[8] = 1;
+		memset(pa, 0, sizeof(T)*n*n);
+		for (size_t i = 0; i < n; ++i) {
+			pa[i*n+i] = 1;
+		}
 	}
 };
 
-template <typename T>
-struct Matrix33Setter {
+template <typename T, size_t n>
+struct StaticMatrixSetter {
 	__device__ __host__ void operator()(T& b, const T& a) const {
-		memcpy(&b, &a, sizeof(T)*9);
+		memcpy(&b, &a, sizeof(T)*n*n);
 	}
 };
 
@@ -190,8 +191,9 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 	// replace the last element with identity (to be propagated back to position 0)
 	if (i == 0) binaryOp(shared[(n-1 + CONFLICT_FREE_OFFSET(n-1))*m]);
 	
-	// NB  for undertermined reasons, using dynamically allocated memory causes discrepancy in results
 	//T* t = new T[m];
+	// NB  For undertermined reasons, using dynamically allocated memory causes discrepancy in results
+	//     Possible reason: dynamically allocated arrays are not contiguous?
 	T t[m];
 	
 	// traverse down tree and build scan
