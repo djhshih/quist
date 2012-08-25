@@ -15,9 +15,8 @@
 using namespace std;
 
 // FIXME RD appears to be numerically unstable when using float...
-// FIXME As N increases, even using double does not prevent numeric instability
+// FIXME As N increases (> 128), even using double does not prevent numeric instability
 typedef double real_t;
-
 
 int main(int argc, char* argv[]) {
 	
@@ -28,7 +27,7 @@ int main(int argc, char* argv[]) {
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_x, *d_x2;
 	real_t *d_B, *d_C;
 	
-	const size_t N = 2048;
+	const size_t N = 128;
 	const size_t B_dim = 3;
 	const size_t B_nelem = B_dim*B_dim;
 	const size_t B_size = N * B_nelem;

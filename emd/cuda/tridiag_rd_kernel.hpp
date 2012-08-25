@@ -44,11 +44,7 @@ __global__ void rd_tridiag(size_t n, const T* C, T* x) {
 	
 	if (i == 0) {
 		x[i] = x0[0];
-	}
-	offset = (i-1) * C_nelem;
-	x[i-1] = C[offset+3] * x0[0] + C[offset+5];
-		
-	if (i == n-1) {
+	} else {
 		offset = (i-1) * C_nelem;
 		x[i] = C[offset] * x0[0] + C[offset+2];
 	}
