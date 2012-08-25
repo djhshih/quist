@@ -7,8 +7,8 @@
 
 template <typename T>
 struct ScalarAdder {
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		a += b;
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		b += a;
 	}
 	// set a to identity
 	__device__ __host__ void operator()(T& a) const {
@@ -18,19 +18,19 @@ struct ScalarAdder {
 
 template <typename T>
 struct ScalarSetter {
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		a = b;
+	__device__ __host__ void operator()(T& b, const T& a) const {
+		b = a;
 	}
 };
 
 template <typename T>
 struct ArrayAdder {
 	ArrayAdder(size_t n) : _n(n) {}
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		T *pa = &a;
-		const T *pb = &b;
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T *pa = &a;
+		T *pb = &b;
 		for (size_t i = 0; i < _n; ++i) {
-			*(pa++) += *(pb++);
+			*(pb++) += *(pa++);
 		}
 	}
 	// set to identity
@@ -44,8 +44,8 @@ private:
 template <typename T>
 struct ArraySetter {
 	ArraySetter(size_t n) : _n(n) {}
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		memcpy(&a, &b, sizeof(T)*_n);
+	__device__ __host__ void operator()(T& b, const T& a) const {
+		memcpy(&b, &a, sizeof(T)*_n);
 	}
 	private:
 		size_t _n;
@@ -57,19 +57,31 @@ struct ArraySetter {
 template <typename T>
 struct MatrixMultipler {
 	MatrixMultipler(size_t n) : _n(n) {}
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		T* pa = &a;
-		const T* pb = &b;
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T* pa = &a;
+		T* pb = &b;
 		T* pc = new T[_n*_n];
 		memset(pc, 0, sizeof(T)*_n*_n);
-		for (size_t i = 0; i < _n; ++i) {
-			for (size_t k = 0; k < _n; ++k) {
-				for (size_t j = 0; j < _n; ++j) {
-					pc[i*_n+j] += pa[i*_n+k]*pb[k*_n+j];
+		
+		if (reversed) {
+			for (size_t i = 0; i < _n; ++i) {
+				for (size_t k = 0; k < _n; ++k) {
+					for (size_t j = 0; j < _n; ++j) {
+						pc[i*_n+j] += pb[i*_n+k]*pa[k*_n+j];
+					}
+				}
+			}
+		} else {
+			for (size_t i = 0; i < _n; ++i) {
+				for (size_t k = 0; k < _n; ++k) {
+					for (size_t j = 0; j < _n; ++j) {
+						pc[i*_n+j] += pa[i*_n+k]*pb[k*_n+j];
+					}
 				}
 			}
 		}
-		memcpy(pa, pc, sizeof(T)*_n*_n);
+		
+		memcpy(pb, pc, sizeof(T)*_n*_n);
 		delete [] pc;
 	}
 	// set to identity
@@ -87,8 +99,8 @@ private:
 template <typename T>
 struct MatrixSetter {
 	MatrixSetter(size_t n) : _n(n) {}
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		memcpy(&a, &b, sizeof(T)*_n*_n);
+	__device__ __host__ void operator()(T& b, const T& a) const {
+		memcpy(&b, &a, sizeof(T)*_n*_n);
 	}
 private:
 	size_t _n;
@@ -96,47 +108,34 @@ private:
 
 /**
  * Mulitpler for 3x3 matrix
+ * Prefix
  */
 template <typename T>
-struct Matrix33MultiplerPost {
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		T* pa = &a;
-		const T* pb = &b;
+struct Matrix33Multipler {
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T* pa = &a;
+		T* pb = &b;
 		T pc[9];
 		memset(pc, 0, sizeof(T)*9);
-		for (size_t i = 0; i < 3; ++i) {
-			for (size_t k = 0; k < 3; ++k) {
-				for (size_t j = 0; j < 3; ++j) {
-					pc[i*3+j] += pa[i*3+k]*pb[k*3+j];
+		
+		if (reversed) {
+			for (size_t i = 0; i < 3; ++i) {
+				for (size_t k = 0; k < 3; ++k) {
+					for (size_t j = 0; j < 3; ++j) {
+						pc[i*3+j] += pb[i*3+k]*pa[k*3+j];
+					}
+				}
+			}
+		} else {
+			for (size_t i = 0; i < 3; ++i) {
+				for (size_t k = 0; k < 3; ++k) {
+					for (size_t j = 0; j < 3; ++j) {
+						pc[i*3+j] += pa[i*3+k]*pb[k*3+j];
+					}
 				}
 			}
 		}
-		memcpy(pa, pc, sizeof(T)*9);
-	}
-	// set to identity
-	__device__ __host__ void operator()(T& a) const {
-		T* pa = &a;
-		memset(&pa[1], 0, sizeof(T)*7);
-		//pa[1] = pa[2] = pa[3] = pa[5] = pa[6] = pa[7] = 0;
-		pa[0] = pa[4] = pa[8] = 1;
-	}
-};
-
-template <typename T>
-struct Matrix33MultiplerPre {
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		T* pa = &a;
-		const T* pb = &b;
-		T pc[9];
-		memset(pc, 0, sizeof(T)*9);
-		for (size_t i = 0; i < 3; ++i) {
-			for (size_t k = 0; k < 3; ++k) {
-				for (size_t j = 0; j < 3; ++j) {
-					pc[i*3+j] += pb[i*3+k]*pa[k*3+j];
-				}
-			}
-		}
-		memcpy(pa, pc, sizeof(T)*9);
+		memcpy(pb, pc, sizeof(T)*9);
 	}
 	// set to identity
 	__device__ __host__ void operator()(T& a) const {
@@ -149,8 +148,8 @@ struct Matrix33MultiplerPre {
 
 template <typename T>
 struct Matrix33Setter {
-	__device__ __host__ void operator()(T& a, const T& b) const {
-		memcpy(&a, &b, sizeof(T)*9);
+	__device__ __host__ void operator()(T& b, const T& a) const {
+		memcpy(&b, &a, sizeof(T)*9);
 	}
 };
 
@@ -191,7 +190,8 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 	// replace the last element with identity (to be propagated back to position 0)
 	if (i == 0) binaryOp(shared[(n-1 + CONFLICT_FREE_OFFSET(n-1))*m]);
 	
-	//T* t = new T[m];
+	//T* t = new T[9];
+	T t[9];
 	
 	// traverse down tree and build scan
 	for (size_t d = 1; d < n; d *= 2) {
@@ -202,13 +202,9 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 			size_t bi = offset * (2*i+2) - 1;
 			ai += CONFLICT_FREE_OFFSET(ai);
 			bi += CONFLICT_FREE_OFFSET(bi);
-			//T t;
-			T t[10];
 			copy(*t, shared[ai*m]);
 			copy(shared[ai*m], shared[bi*m]);
-			// reverse order
-			binaryOp(*t, shared[bi*m]);
-			copy(shared[bi*m], *t);
+			binaryOp(shared[bi*m], *t, true);
 		}
 	}
 	
@@ -227,7 +223,7 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 		++j;
 		if ((j+1) % n == 0) {
 			copy(y[j*m], shared[(ai + bankOffsetA)*m]);
-			binaryOp(y[j*m], x[j*m]);
+			binaryOp(y[j*m], x[j*m], true);
 		}
 	}
 
@@ -238,7 +234,7 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 		++j;
 		if ((j+1) % n == 0) {
 			copy(y[j*m], shared[(bi + bankOffsetB)*m]);
-			binaryOp(y[j*m], x[j*m]);
+			binaryOp(y[j*m], x[j*m], true);
 		}
 	}
 }

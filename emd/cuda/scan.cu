@@ -16,7 +16,7 @@ typedef float real_t;
 int main(int argc, char* argv[]) {
 	
 	real_t *h_x, *h_y;
-	real_t *h_block_x, *h_block_y;
+	//real_t *h_block_x, *h_block_y;
 	real_t *d_x, *d_y, *d_block_x, *d_block_y;
 	
 	// assume N < 2^22
@@ -36,8 +36,8 @@ int main(int argc, char* argv[]) {
 	// allocate array on host
 	h_x = (real_t*)malloc(nbytes);
 	h_y = (real_t*)malloc(nbytes);
-	h_block_x = (real_t*)malloc(nbytes_block);
-	h_block_y = (real_t*)malloc(nbytes_block);
+	//h_block_x = (real_t*)malloc(nbytes_block);
+	//h_block_y = (real_t*)malloc(nbytes_block);
 	
 	
 	// allocate array on device
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 	
 	// initialize host array
 	for (size_t i = 0; i < N*m; ++i) {
-		h_x[i] = (rand() % 3);
+		h_x[i] = (rand() % 3) - 1;
 	}
 	
 	// copy data to device
@@ -56,10 +56,10 @@ int main(int argc, char* argv[]) {
 	
 	//ScalarAdder<real_t> adder;
 	//ScalarSetter<real_t> setter;
-	ArrayAdder<real_t> adder(m);
-	ArraySetter<real_t> setter(m);
-	//Matrix33MultiplerPre<real_t> adder;
-	//Matrix33Setter<real_t> setter;
+	//ArrayAdder<real_t> adder(m);
+	//ArraySetter<real_t> setter(m);
+	Matrix33Multipler<real_t> adder;
+	Matrix33Setter<real_t> setter;
 	//MatrixMultipler<real_t> adder(3);
 	//MatrixSetter<real_t> setter(3);
 	
@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
 
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_y, d_y, nbytes, cudaMemcpyDeviceToHost);
-	cudaMemcpy(h_block_x, d_block_x, nbytes_block, cudaMemcpyDeviceToHost);
-	cudaMemcpy(h_block_y, d_block_y, nbytes_block, cudaMemcpyDeviceToHost);
+	//cudaMemcpy(h_block_x, d_block_x, nbytes_block, cudaMemcpyDeviceToHost);
+	//cudaMemcpy(h_block_y, d_block_y, nbytes_block, cudaMemcpyDeviceToHost);
 	
 	// compute gold standard
 	real_t* h_gold = new real_t[N*m];
@@ -105,9 +105,11 @@ int main(int argc, char* argv[]) {
 	}
 	if (!equal) printf("Differences detected!\n");
 	
+	/*
 	for (size_t i = 0; i < grid_dim.x*m; ++i) {
 		printf("%d %.0f %.0f\n", i, h_block_x[i], h_block_y[i]);
 	}
+	*/
 	
 	cudaError_t code = cudaGetLastError();
 	if (code != cudaSuccess) {
@@ -118,8 +120,8 @@ int main(int argc, char* argv[]) {
 	// clean up
 	free(h_x);
 	free(h_y);
-	free(h_block_x);
-	free(h_block_y);
+	//free(h_block_x);
+	//free(h_block_y);
 	
 	delete [] h_gold;
 	
