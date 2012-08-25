@@ -156,8 +156,8 @@ struct Matrix33Setter {
 /**
  * NB  If the binary operation is not communicative, be sure to provide a prefix binary operator.
  */
-template <typename T, typename BinaryOp, typename Setter >
-__global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Setter copy, const size_t m=1) {
+template <size_t m, typename T, typename BinaryOp, typename Setter>
+__global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Setter copy) {
 	extern __shared__ T shared[];
 	
 	size_t i = threadIdx.x;
@@ -190,8 +190,9 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 	// replace the last element with identity (to be propagated back to position 0)
 	if (i == 0) binaryOp(shared[(n-1 + CONFLICT_FREE_OFFSET(n-1))*m]);
 	
-	//T* t = new T[9];
-	T t[9];
+	// NB  for undertermined reasons, using dynamically allocated memory causes discrepancy in results
+	//T* t = new T[m];
+	T t[m];
 	
 	// traverse down tree and build scan
 	for (size_t d = 1; d < n; d *= 2) {
@@ -239,13 +240,13 @@ __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Set
 	}
 }
 
-template <typename T, typename Setter>
-__global__ void aggregate_block_sum(size_t block_size, const T* y, T* out, Setter copy, size_t m = 1) {
+template <size_t m, typename T, typename Setter>
+__global__ void aggregate_block_sum(size_t block_size, const T* y, T* out, Setter copy) {
 	copy(out[threadIdx.x*m], y[((threadIdx.x+1) * block_size - 1)*m]);
 }
 
-template <typename T, typename BinaryOp, typename Setter >
-__global__ void add_block_cumsum(size_t n, const T* blocks, T* y, BinaryOp binaryOp, Setter copy, size_t m = 1) {
+template <size_t m, typename T, typename BinaryOp, typename Setter >
+__global__ void add_block_cumsum(size_t n, const T* blocks, T* y, BinaryOp binaryOp, Setter copy) {
 	// since inclusive scan was calculated, don't modify elements within first block
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 	size_t j = i / (2*blockDim.x);
