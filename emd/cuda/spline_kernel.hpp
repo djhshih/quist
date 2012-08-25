@@ -45,11 +45,18 @@ __global__ void ncspline_setup(size_t n, const T* x, const T* y, T* sub_diag, T*
 	
 	// setup tridiagonal matrix system
 	
-	if (i == 0 || i == n-1) {
+	if (i == 0) {
+		
+		sub_diag[i] = 1;
+		main_diag[i] = 1;
+		sup_diag[i] = 0;
+		r[i] = 0;
+		
+	} else if (i == n-1) {
 		
 		sub_diag[i] = 0;
 		main_diag[i] = 1;
-		sup_diag[i] = 0;
+		sup_diag[i] = 1;
 		r[i] = 0;
 		
 	} else {

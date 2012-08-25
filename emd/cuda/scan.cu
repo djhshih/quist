@@ -4,6 +4,7 @@
 #undef _GLIBCXX_USE_INT128
 
 #include <cstdio>
+#include <ctime>
 
 #include "scan_kernel.hpp"
 
@@ -14,6 +15,8 @@ typedef float real_t;
 
 
 int main(int argc, char* argv[]) {
+	
+	std::srand( (unsigned)time(NULL) );
 	
 	real_t *h_x, *h_y;
 	//real_t *h_block_x, *h_block_y;
@@ -59,9 +62,9 @@ int main(int argc, char* argv[]) {
 	//ScalarSetter<real_t> setter;
 	//ArrayAdder<real_t> adder(m);
 	//ArraySetter<real_t> setter(m);
-	StaticMatrixMultipler<real_t, mat_dim> adder;
+	StaticMatrixMultiplierPrefix<real_t, mat_dim> adder;
 	StaticMatrixSetter<real_t, mat_dim> setter;
-	//MatrixMultipler<real_t> adder(mat_dim);
+	//MatrixMultiplier<real_t> adder(mat_dim);
 	//MatrixSetter<real_t> setter(mat_dim);
 	
 	// do calculation on device

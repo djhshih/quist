@@ -2,8 +2,8 @@
 #define NUM_BANKS 32
 #define LOG_NUM_BANKS 5
 #define CONFLICT_FREE_OFFSET(n)  ((n) >> NUM_BANKS + (n) >> (2 * LOG_NUM_BANKS))  
-#include <boost/concept_check.hpp>
 
+#include <cstddef>
 
 template <typename T>
 struct ScalarAdder {
@@ -53,10 +53,11 @@ struct ArraySetter {
 
 /**
  * Squared matrix mulitplier
+ * NB  dynamically allocated arrays seem to cause discrepancy in prescan
  */
 template <typename T>
-struct MatrixMultipler {
-	MatrixMultipler(size_t n) : _n(n) {}
+struct MatrixMultiplierPostfix {
+	MatrixMultiplierPostfix(size_t n) : _n(n) {}
 	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
 		const T* pa = &a;
 		T* pb = &b;
@@ -107,11 +108,11 @@ private:
 };	
 
 /**
- * Mulitpler for 3x3 matrix
- * Prefix
+ * Mulitpler for static matrix
+ * Postfix
  */
 template <typename T, size_t n>
-struct StaticMatrixMultipler {
+struct StaticMatrixMultiplierPostfix {
 	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
 		const T* pa = &a;
 		T* pb = &b;
@@ -147,6 +148,47 @@ struct StaticMatrixMultipler {
 	}
 };
 
+/**
+ * Mulitplier for static matrix
+ * Prefix
+ */
+template <typename T, size_t n>
+struct StaticMatrixMultiplierPrefix {
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T* pa = &a;
+		T* pb = &b;
+		T pc[n*n];
+		memset(pc, 0, sizeof(T)*n*n);
+		
+		if (reversed) {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t k = 0; k < n; ++k) {
+					for (size_t j = 0; j < n; ++j) {
+						pc[i*n+j] += pa[i*n+k]*pb[k*n+j];
+					}
+				}
+			}
+		} else {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t k = 0; k < n; ++k) {
+					for (size_t j = 0; j < n; ++j) {
+						pc[i*3+j] += pb[i*n+k]*pa[k*n+j];
+					}
+				}
+			}
+		}
+		memcpy(pb, pc, sizeof(T)*n*n);
+	}
+	// set to identity
+	__device__ __host__ void operator()(T& a) const {
+		T* pa = &a;
+		memset(pa, 0, sizeof(T)*n*n);
+		for (size_t i = 0; i < n; ++i) {
+			pa[i*n+i] = 1;
+		}
+	}
+};
+
 template <typename T, size_t n>
 struct StaticMatrixSetter {
 	__device__ __host__ void operator()(T& b, const T& a) const {
@@ -154,9 +196,6 @@ struct StaticMatrixSetter {
 	}
 };
 
-/**
- * NB  If the binary operation is not communicative, be sure to provide a prefix binary operator.
- */
 template <size_t m, typename T, typename BinaryOp, typename Setter>
 __global__ void prescan(const size_t n, const T* x, T* y, BinaryOp binaryOp, Setter copy) {
 	extern __shared__ T shared[];
