@@ -149,6 +149,59 @@ struct StaticMatrixMultiplierPostfix {
 };
 
 /**
+ * Mulitpler for static matrix
+ * Postfix
+ * Uses Kahan summation for numeric stability
+ */
+template <typename T, size_t n>
+struct StaticMatrixMultiplierPostfixStable {
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T* pa = &a;
+		T* pb = &b;
+		T pc[n*n];
+		memset(pc, 0, sizeof(T)*n*n);
+		
+		if (reversed) {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t j = 0; j < n; ++j) {
+					T sum = 0, c = 0;
+					for (size_t k = 0; k < n; ++k) {
+						T y = pb[i*n+k]*pa[k*n+j] - c;
+						T t = sum + y;
+						c = (t - sum) - y;
+						sum = t;
+					}
+					pc[i*3+j] = sum;
+				}
+			}
+		} else {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t j = 0; j < n; ++j) {
+					T sum = 0, c = 0;
+					for (size_t k = 0; k < n; ++k) {
+						T y = pa[i*n+k]*pb[k*n+j] - c;
+						T t = sum + y;
+						c = (t - sum) - y;
+						sum = t;
+					}
+					pc[i*3+j] = sum;
+				}
+			}
+		}
+		memcpy(pb, pc, sizeof(T)*n*n);
+	}
+	// set to identity
+	__device__ __host__ void operator()(T& a) const {
+		T* pa = &a;
+		memset(pa, 0, sizeof(T)*n*n);
+		for (size_t i = 0; i < n; ++i) {
+			pa[i*n+i] = 1;
+		}
+	}
+};
+    
+
+/**
  * Mulitplier for static matrix
  * Prefix
  */
@@ -174,6 +227,58 @@ struct StaticMatrixMultiplierPrefix {
 					for (size_t j = 0; j < n; ++j) {
 						pc[i*3+j] += pb[i*n+k]*pa[k*n+j];
 					}
+				}
+			}
+		}
+		memcpy(pb, pc, sizeof(T)*n*n);
+	}
+	// set to identity
+	__device__ __host__ void operator()(T& a) const {
+		T* pa = &a;
+		memset(pa, 0, sizeof(T)*n*n);
+		for (size_t i = 0; i < n; ++i) {
+			pa[i*n+i] = 1;
+		}
+	}
+};
+
+/**
+ * Mulitpler for static matrix
+ * Prefix
+ * Uses Kahan summation for numeric stability
+ */
+template <typename T, size_t n>
+struct StaticMatrixMultiplierPrefixStable {
+	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
+		const T* pa = &a;
+		T* pb = &b;
+		T pc[n*n];
+		memset(pc, 0, sizeof(T)*n*n);
+		
+		if (reversed) {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t j = 0; j < n; ++j) {
+					T sum = 0, c = 0;
+					for (size_t k = 0; k < n; ++k) {
+						T y = pa[i*n+k]*pb[k*n+j] - c;
+						T t = sum + y;
+						c = (t - sum) - y;
+						sum = t;
+					}
+					pc[i*3+j] = sum;
+				}
+			}
+		} else {
+			for (size_t i = 0; i < n; ++i) {
+				for (size_t j = 0; j < n; ++j) {
+					T sum = 0, c = 0;
+					for (size_t k = 0; k < n; ++k) {
+						T y = pb[i*n+k]*pa[k*n+j] - c;
+						T t = sum + y;
+						c = (t - sum) - y;
+						sum = t;
+					}
+					pc[i*3+j] = sum;
 				}
 			}
 		}

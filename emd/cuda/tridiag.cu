@@ -15,8 +15,9 @@
 using namespace std;
 
 // FIXME RD appears to be numerically unstable when using float...
-// FIXME As N increases (> 128), even using double does not prevent numeric instability
-typedef double real_t;
+// FIXME As N increases (> 128), even using double does not prevent numerical instability
+//       Using Kahan summation inside matrix multiplier appears to have improved numerical instability somewhat
+typedef float real_t;
 
 int main(int argc, char* argv[]) {
 	
@@ -27,7 +28,7 @@ int main(int argc, char* argv[]) {
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_x, *d_x2;
 	real_t *d_B, *d_C;
 	
-	const size_t N = 128;
+	const size_t N = 1024;
 	const size_t B_dim = 3;
 	const size_t B_nelem = B_dim*B_dim;
 	const size_t B_size = N * B_nelem;
@@ -56,10 +57,10 @@ int main(int argc, char* argv[]) {
 	
 	// initialize host array
 	for (size_t i = 0; i < N; ++i) {
-		h_sub[i] = (std::rand() % 10) + 1;
-		h_main[i] = (std::rand() % 10) + 1;
-		h_sup[i] = (std::rand() % 10) + 1;
-		h_r[i] = (std::rand() % 10) + 1;
+		h_sub[i] = (std::rand() % 5) + 5;
+		h_main[i] = (std::rand() % 5) + 5;
+		h_sup[i] = (std::rand() % 5) + 5;
+		h_r[i] = (std::rand() % 5) + 5;
 	}
 	
 	// clear device arrays
@@ -72,7 +73,8 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(d_r, h_r, nbytes, cudaMemcpyHostToDevice);
 	
 	
-	StaticMatrixMultiplierPrefix<real_t, B_dim> multiplier;
+	StaticMatrixMultiplierPrefixStable<real_t, B_dim> multiplier;
+	//StaticMatrixMultiplierPrefix<real_t, B_dim> multiplier;
 	StaticMatrixSetter<real_t, B_dim> setter;
 
 	// do calculation on device

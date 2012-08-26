@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 	//ScalarSetter<real_t> setter;
 	//ArrayAdder<real_t> adder(m);
 	//ArraySetter<real_t> setter(m);
-	StaticMatrixMultiplierPrefix<real_t, mat_dim> adder;
+	StaticMatrixMultiplierPrefixStable<real_t, mat_dim> adder;
 	StaticMatrixSetter<real_t, mat_dim> setter;
 	//MatrixMultiplier<real_t> adder(mat_dim);
 	//MatrixSetter<real_t> setter(mat_dim);
