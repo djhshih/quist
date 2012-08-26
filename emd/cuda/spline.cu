@@ -79,7 +79,12 @@ int main(int argc, char* argv[]) {
 	}
 	
 	// clear device output arrays
-	//cudamemset(d_yy, 0, nbytes_nn);
+	//cudaMemset(d_yy, 0, nbytes_nn);
+	
+	// zero the first element of the output (special case for natural cubic spline)
+	// need to zero the last element too
+	// therefore, might as well zero everything
+	cudaMemset(d_c, 0, nbytes);
 	
 	// copy data to device
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
@@ -95,7 +100,11 @@ int main(int argc, char* argv[]) {
 	tridiag <<< 1, 1 >>> (N, d_sub, d_main, d_sup, d_r, d_c2);
 	
 	{
-	rd_prefix <<< grid_dim, block_dim >>> (N, d_sub, d_main, d_sup, d_r, d_B);
+	// offset by 1 to skip the first element
+	// Assumption for RD: d_sup[i] != 0 for all 0 <= i < n
+	// But d_sup[0] = 0 for natural cubic spline. Therefore, skip it.
+	// Further reduce N to N-2 to skip the last element as well.
+	rd_prefix <<< grid_dim, block_dim >>> (N-2, d_sub+1, d_main+1, d_sup+1, d_r+1, d_B);
 	
 	size_t elemPerBlock = 4;
 	dim3 block_dim2 = elemPerBlock / 2;
@@ -125,7 +134,10 @@ int main(int argc, char* argv[]) {
 		cudaFree(d_block_C);
 	}
 	
-	rd_tridiag <<< grid_dim, block_dim >>> (N, d_C, d_c);
+	// offset first element of output, since row i of in tridiagonal matrix was was skipped.
+	// same for last element
+	// prerequisite: d_c[0] and d_c[n-1] are already set to 0
+	rd_tridiag <<< grid_dim, block_dim >>> (N-2, d_C, d_c+1);
 	}
 	
 	
