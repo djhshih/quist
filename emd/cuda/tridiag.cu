@@ -24,11 +24,10 @@ int main(int argc, char* argv[]) {
 	std::srand( (unsigned)time(NULL) );
 	
 	real_t *h_sub, *h_main, *h_sup, *h_r, *h_x, *h_x2;
-	
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_x, *d_x2;
 	real_t *d_B, *d_C;
 	
-	const size_t N = 1024;
+	const size_t N = 128;
 	const size_t B_dim = 3;
 	const size_t B_nelem = B_dim*B_dim;
 	const size_t B_size = N * B_nelem;
@@ -71,7 +70,6 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(d_main, h_main, nbytes, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_sup, h_sup, nbytes, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_r, h_r, nbytes, cudaMemcpyHostToDevice);
-	
 	
 	StaticMatrixMultiplierPrefixStable<real_t, B_dim> multiplier;
 	//StaticMatrixMultiplierPrefix<real_t, B_dim> multiplier;
