@@ -29,6 +29,7 @@ struct ArrayAdder {
 	__device__ __host__ void operator()(T& b, const T& a, bool reversed=false) const {
 		const T *pa = &a;
 		T *pb = &b;
+#pragma unroll
 		for (size_t i = 0; i < _n; ++i) {
 			*(pb++) += *(pa++);
 		}
@@ -120,16 +121,22 @@ struct StaticMatrixMultiplierPostfix {
 		memset(pc, 0, sizeof(T)*n*n);
 		
 		if (reversed) {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t k = 0; k < n; ++k) {
+#pragma unroll
 					for (size_t j = 0; j < n; ++j) {
 						pc[i*3+j] += pb[i*n+k]*pa[k*n+j];
 					}
 				}
 			}
 		} else {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t k = 0; k < n; ++k) {
+#pragma unroll
 					for (size_t j = 0; j < n; ++j) {
 						pc[i*n+j] += pa[i*n+k]*pb[k*n+j];
 					}
@@ -162,9 +169,12 @@ struct StaticMatrixMultiplierPostfixStable {
 		memset(pc, 0, sizeof(T)*n*n);
 		
 		if (reversed) {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t j = 0; j < n; ++j) {
 					T sum = 0, c = 0;
+#pragma unroll
 					for (size_t k = 0; k < n; ++k) {
 						T y = pb[i*n+k]*pa[k*n+j] - c;
 						T t = sum + y;
@@ -175,9 +185,12 @@ struct StaticMatrixMultiplierPostfixStable {
 				}
 			}
 		} else {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t j = 0; j < n; ++j) {
 					T sum = 0, c = 0;
+#pragma unroll
 					for (size_t k = 0; k < n; ++k) {
 						T y = pa[i*n+k]*pb[k*n+j] - c;
 						T t = sum + y;
@@ -214,16 +227,22 @@ struct StaticMatrixMultiplierPrefix {
 		memset(pc, 0, sizeof(T)*n*n);
 		
 		if (reversed) {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t k = 0; k < n; ++k) {
+#pragma unroll
 					for (size_t j = 0; j < n; ++j) {
 						pc[i*n+j] += pa[i*n+k]*pb[k*n+j];
 					}
 				}
 			}
 		} else {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t k = 0; k < n; ++k) {
+#pragma unroll
 					for (size_t j = 0; j < n; ++j) {
 						pc[i*3+j] += pb[i*n+k]*pa[k*n+j];
 					}
@@ -256,9 +275,12 @@ struct StaticMatrixMultiplierPrefixStable {
 		memset(pc, 0, sizeof(T)*n*n);
 		
 		if (reversed) {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t j = 0; j < n; ++j) {
 					T sum = 0, c = 0;
+#pragma unroll
 					for (size_t k = 0; k < n; ++k) {
 						T y = pa[i*n+k]*pb[k*n+j] - c;
 						T t = sum + y;
@@ -269,9 +291,12 @@ struct StaticMatrixMultiplierPrefixStable {
 				}
 			}
 		} else {
+#pragma unroll
 			for (size_t i = 0; i < n; ++i) {
+#pragma unroll
 				for (size_t j = 0; j < n; ++j) {
 					T sum = 0, c = 0;
+#pragma unroll
 					for (size_t k = 0; k < n; ++k) {
 						T y = pb[i*n+k]*pa[k*n+j] - c;
 						T t = sum + y;

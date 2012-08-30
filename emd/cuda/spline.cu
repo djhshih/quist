@@ -14,7 +14,7 @@
 
 using namespace std;
 
-typedef float real_t;
+typedef double real_t;
 
 
 int main(int argc, char* argv[]) {
@@ -23,6 +23,8 @@ int main(int argc, char* argv[]) {
 	
 	real_t *h_x, *h_y, *h_xx, *h_yy;
 	real_t *h_c, *h_c2;
+	real_t *h_sub, *h_main, *h_sup;
+	real_t *h_B, *h_C;
 	
 	real_t *d_x, *d_y, *d_xx, *d_yy;
 	real_t *d_sub, *d_main, *d_sup, *d_r, *d_b, *d_c, *d_d;
@@ -36,8 +38,6 @@ int main(int argc, char* argv[]) {
 	const size_t B_nelem = B_dim*B_dim;
 	const size_t B_size = N * B_nelem;
 	
-	dim3 block_dim = 4;
-	dim3 grid_dim = N / block_dim.x + (N % block_dim.x == 0 ? 0 : 1);
 	
 	size_t nbytes = N * sizeof(real_t);
 	size_t nbytes_nn = nn * sizeof(real_t);
@@ -50,6 +50,13 @@ int main(int argc, char* argv[]) {
 	h_yy = (real_t*)malloc(nbytes_nn);
 	h_c = (real_t*)malloc(nbytes);
 	h_c2 = (real_t*)malloc(nbytes);
+	
+	h_sub = (real_t*)malloc(nbytes);
+	h_main = (real_t*)malloc(nbytes);
+	h_sup = (real_t*)malloc(nbytes);
+	
+	h_B = (real_t*)malloc(nbytes_B);
+	h_C = (real_t*)malloc(nbytes_B);
 	
 	// allocate array on device
 	cudaMalloc((void**) &d_x, nbytes);
@@ -85,6 +92,10 @@ int main(int argc, char* argv[]) {
 	// need to zero the last element too
 	// therefore, might as well zero everything
 	cudaMemset(d_c, 0, nbytes);
+	cudaMemset(d_c2, 0, nbytes);
+	cudaMemset(d_C, 0, nbytes_B);
+	cudaMemset(d_B, 0, nbytes_B);
+	cudaMemset(d_yy, 0, nbytes_nn);
 	
 	// copy data to device
 	cudaMemcpy(d_x, h_x, nbytes, cudaMemcpyHostToDevice);
@@ -93,24 +104,28 @@ int main(int argc, char* argv[]) {
 	
 	StaticMatrixMultiplierPrefixStable<real_t, B_dim> multiplier;
 	StaticMatrixSetter<real_t, B_dim> setter;
+	
+	dim3 block_dim = 4;
+	dim3 grid_dim = N / block_dim.x + (N % block_dim.x == 0 ? 0 : 1);
 
 	// do calculation on device
 	ncspline_setup <<< grid_dim, block_dim >>> (N, d_x, d_y, d_sub, d_main, d_sup, d_r);
 	
-	tridiag <<< 1, 1 >>> (N, d_sub, d_main, d_sup, d_r, d_c2);
-	
-	{
 	// offset by 1 to skip the first element
 	// Assumption for RD: d_sup[i] != 0 for all 0 <= i < n
 	// But d_sup[0] = 0 for natural cubic spline. Therefore, skip it.
 	// Further reduce N to N-2 to skip the last element as well.
 	rd_prefix <<< grid_dim, block_dim >>> (N-2, d_sub+1, d_main+1, d_sup+1, d_r+1, d_B);
+	size_t N2 = N - 2;
 	
-	size_t elemPerBlock = 4;
+	size_t elemPerBlock = 8;
 	dim3 block_dim2 = elemPerBlock / 2;
-	dim3 grid_dim2 = N / elemPerBlock + (N % elemPerBlock == 0 ? 0 : 1);
+	dim3 grid_dim2 = (N2 / elemPerBlock) + (N2 % elemPerBlock == 0 ? 0 : 1);
+	
+	// NB prescan needs N to be a power of 2
 
 	prescan<B_nelem> <<< grid_dim2, block_dim2, elemPerBlock*sizeof(real_t) * B_nelem >>> (elemPerBlock, d_B, d_C, multiplier, setter);
+	
 	
 	if (grid_dim2.x > 1) {
 		
@@ -124,11 +139,12 @@ int main(int argc, char* argv[]) {
 		aggregate_block_sum<B_nelem> <<< 1, grid_dim2 >>> (elemPerBlock, d_C, d_block_B, setter);
 		
 		// one block; each thread processes two scan block sums (hence need half the number of scan blocks from previous run)
-		prescan<B_nelem> <<< 1, grid_dim2.x/2, grid_dim2.x*sizeof(real_t) * B_nelem >>> (grid_dim2.x, d_block_B, d_block_C, multiplier, setter);
+		size_t grid_dim3 = (grid_dim2.x / 2) + (grid_dim2.x % 2 == 0 ? 0 : 1);
+		prescan<B_nelem> <<< 1, grid_dim3, grid_dim2.x*sizeof(real_t) * B_nelem >>> (grid_dim2.x, d_block_B, d_block_C, multiplier, setter);
 		
 		// each thread processes one element in original data
 		// need twice as many blocks as before, since each thread now processes one element
-		add_block_cumsum<B_nelem> <<< grid_dim2.x*2, block_dim >>> (N, d_block_C, d_C, multiplier, setter);
+		add_block_cumsum<B_nelem> <<< grid_dim2.x*2, block_dim >>> (N2, d_block_C, d_C, multiplier, setter);
 		
 		cudaFree(d_block_B);
 		cudaFree(d_block_C);
@@ -137,8 +153,9 @@ int main(int argc, char* argv[]) {
 	// offset first element of output, since row i of in tridiagonal matrix was was skipped.
 	// same for last element
 	// prerequisite: d_c[0] and d_c[n-1] are already set to 0
-	rd_tridiag <<< grid_dim, block_dim >>> (N-2, d_C, d_c+1);
-	}
+	rd_tridiag <<< grid_dim, block_dim >>> (N2, d_C, d_c+1);
+	
+	
 	
 	
 	ncspline_teardown <<< grid_dim, block_dim >>> (N, d_x, d_y, d_c, d_b, d_d);
@@ -149,11 +166,41 @@ int main(int argc, char* argv[]) {
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_yy, d_yy, nbytes_nn, cudaMemcpyDeviceToHost);
 	cudaMemcpy(h_c, d_c, nbytes, cudaMemcpyDeviceToHost);
-	cudaMemcpy(h_c2, d_c2, nbytes, cudaMemcpyDeviceToHost);
+	
+	cudaMemcpy(h_sub, d_sub, nbytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_main, d_main, nbytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_sup, d_sup, nbytes, cudaMemcpyDeviceToHost);
+	
+	cudaMemcpy(h_B, d_B, nbytes_B, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_C, d_C, nbytes_B, cudaMemcpyDeviceToHost);
 	
 	// compute gold standard
+	
+	tridiag <<< 1, 1 >>> (N, d_sub, d_main, d_sup, d_r, d_c2);
+	cudaMemcpy(h_c2, d_c2, nbytes, cudaMemcpyDeviceToHost);
+	
 	real_t* h_yy_gold = new real_t[nn];
 	bla::splint(N, h_x, h_y, nn, h_xx, h_yy_gold);
+	
+	for (size_t i = 0; i < N; ++i) {
+		printf("%d %f %f %f\n", i, h_sub[i], h_main[i], h_sup[i]);
+	}
+	
+	for (size_t i = 0; i < N; ++i) {
+		printf("%d ", i);
+		for (size_t j = 0; j < B_nelem; ++j) {
+			printf("%f ", h_B[i*B_nelem + j]);
+		}
+		printf("\n");
+	}
+	
+	for (size_t i = 0; i < N; ++i) {
+		printf("%d ", i);
+		for (size_t j = 0; j < B_nelem; ++j) {
+			printf("%f ", h_C[i*B_nelem + j]);
+		}
+		printf("\n");
+	}
 	
 	// print results
 	for (size_t i = 0; i < N; ++i) {
@@ -179,6 +226,7 @@ int main(int argc, char* argv[]) {
 	
 	free(h_c);
 	free(h_c2);
+	free(h_sup);
 	
 	
 	delete [] h_yy_gold;

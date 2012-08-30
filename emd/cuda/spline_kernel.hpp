@@ -59,7 +59,7 @@ __global__ void ncspline_setup(size_t n, const T* x, const T* y, T* sub_diag, T*
 		sup_diag[i] = 1;
 		r[i] = 0;
 		
-	} else {
+	} else if (i < n-1) {
 		
 		// cache in register values that will be re-used
 		// p = previous; c = current; n = next
@@ -86,7 +86,7 @@ __global__ void ncspline_teardown(size_t n, const T* x, const T* y, const T* c, 
 		T cc = c[i], cn = c[i+1];
 		b[i] = (y[i+1] - y[i]) / hc  -  hc * (2*cc + cn) / 3;
 		d[i] = (cn - cc) / (3 * hc);
-	} else {
+	} else if (i == n-1) {
 		// b[n-1] and d[n-1] are not calculated
 		b[i] = 0;
 		d[i] = 0;
@@ -132,44 +132,48 @@ template <typename T>
 __global__ void splint_linear_search(const size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, const size_t nn, const T* xx, T* yy) {
 	
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-	T xc = x[i], xn = x[i+1];
-
-	size_t ii = nn-1;
-		
-	// find index ii that is just before the starting index
-	while (xx[ii] > xc) {
-		--ii;
-	}
-	++ii;
 	
-	// interpolate until the next spline
-	while (ii < nn && xx[ii] <= xn) {
-		T t = xx[ii] - xc;
-		yy[ii++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
-	}
+	if (i < n) {
+		T xc = x[i], xn = x[i+1];
 
+		size_t ii = nn-1;
+			
+		// find index ii that is just before the starting index
+		while (xx[ii] > xc) {
+			--ii;
+		}
+		++ii;
+		
+		// interpolate until the next spline
+		while (ii < nn && xx[ii] <= xn) {
+			T t = xx[ii] - xc;
+			yy[ii++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
+		}
+	}
 }
 
 template <typename T>
 __global__ void splint_binary_search(const size_t n, const T* x, const T* a, const T* b, const T* c, const T* d, const size_t nn, const T* xx, T* yy) {
 	
 	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-	T xc = x[i], xn = x[i+1];
-
-	size_t jl = 0, jr = nn-1, j;
-		
-	// find starting index j by binary search
-	while (jr - jl > 1) {
-		j = (jr + jl) / 2;
-		if (xx[j] >= xc) jr = j;
-		else jl = j;
-	}
-	j = jl;
 	
-	// interpolate until the next spline
-	while (j < nn && xx[j] <= xn) {
-		T t = xx[j] - xc;
-		yy[j++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
-	}
+	if (i < n-1) {
+		T xc = x[i], xn = x[i+1];
 
+		size_t jl = 0, jr = nn-1, j;
+			
+		// find starting index j by binary search
+		while (jr - jl > 1) {
+			j = (jr + jl) / 2;
+			if (xx[j] >= xc) jr = j;
+			else jl = j;
+		}
+		j = jl;
+		
+		// interpolate until the next spline
+		while (j < nn && xx[j] <= xn) {
+			T t = xx[j] - xc;
+			yy[j++] = a[i] + (b[i] + (c[i] + d[i] * t) * t ) * t;
+		}
+	}
 }
