@@ -6,6 +6,9 @@
 #include <cstdio>
 #include <ctime>
 
+#define _DEBUG
+
+#include "util.hpp"
 #include "scan_kernel.hpp"
 
 
@@ -99,7 +102,7 @@ int main(int argc, char* argv[]) {
 	// print results
 	bool equal = true;
 	for (size_t i = 0; i < N*m; ++i) {
-		printf("%d %.0f %.0f %.0f", i, h_x[i], h_y[i], h_gold[i]);
+		printf("%lu %.0f %.0f %.0f", i, h_x[i], h_y[i], h_gold[i]);
 		if (std::abs(h_y[i] - h_gold[i]) > 1e-5) {
 			equal = false;
 			printf("*\n");
@@ -115,11 +118,7 @@ int main(int argc, char* argv[]) {
 	}
 	*/
 	
-	cudaError_t code = cudaGetLastError();
-	if (code != cudaSuccess) {
-		printf("%s\n", cudaGetErrorString(code));
-		printf("grid_dim = %d, block_dim = %d\n", grid_dim.x, block_dim.x);
-	}
+	CUDA_CHECK_ERROR("end");
 	
 	// clean up
 	free(h_x);

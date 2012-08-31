@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
 	// print results
 	bool equal = true;
 	for (size_t i = 0; i < N; ++i) {
-		printf("%d %f %f %f", i, h_x[i], h_x2[i], h_x_gold[i]);
+		printf("%lu %f %f %f", i, h_x[i], h_x2[i], h_x_gold[i]);
 		if (std::abs(h_x[i] - h_x_gold[i]) > 1e-2) {
 			equal = false;
 			printf("*\n");

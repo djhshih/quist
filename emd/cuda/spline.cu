@@ -11,6 +11,7 @@
 #include "tridiag_rd_kernel.hpp"
 #include "scan_kernel.hpp"
 #include "../../bla/bla.hpp"
+#include "cudpp/crpcr.hpp"
 
 using namespace std;
 
@@ -153,9 +154,9 @@ int main(int argc, char* argv[]) {
 	// offset first element of output, since row i of in tridiagonal matrix was was skipped.
 	// same for last element
 	// prerequisite: d_c[0] and d_c[n-1] are already set to 0
-	rd_tridiag <<< grid_dim, block_dim >>> (N2, d_C, d_c+1);
+	//rd_tridiag <<< grid_dim, block_dim >>> (N2, d_C, d_c+1);
 	
-	
+	crpcr(d_sub, d_main, d_sup, d_r, d_c, N, 1);
 	
 	
 	ncspline_teardown <<< grid_dim, block_dim >>> (N, d_x, d_y, d_c, d_b, d_d);
@@ -183,11 +184,11 @@ int main(int argc, char* argv[]) {
 	bla::splint(N, h_x, h_y, nn, h_xx, h_yy_gold);
 	
 	for (size_t i = 0; i < N; ++i) {
-		printf("%d %f %f %f\n", i, h_sub[i], h_main[i], h_sup[i]);
+		printf("%lu %f %f %f\n", i, h_sub[i], h_main[i], h_sup[i]);
 	}
 	
 	for (size_t i = 0; i < N; ++i) {
-		printf("%d ", i);
+		printf("%lu ", i);
 		for (size_t j = 0; j < B_nelem; ++j) {
 			printf("%f ", h_B[i*B_nelem + j]);
 		}
@@ -195,7 +196,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	for (size_t i = 0; i < N; ++i) {
-		printf("%d ", i);
+		printf("%lu ", i);
 		for (size_t j = 0; j < B_nelem; ++j) {
 			printf("%f ", h_C[i*B_nelem + j]);
 		}
@@ -204,12 +205,12 @@ int main(int argc, char* argv[]) {
 	
 	// print results
 	for (size_t i = 0; i < N; ++i) {
-		printf("%d %f %f\n", i, h_c[i], h_c2[i]);
+		printf("%lu %f %f\n", i, h_c[i], h_c2[i]);
 	}
 	
 	// print results
 	for (size_t i = 0; i < nn; ++i) {
-		printf("%d %f %f\n", i, h_yy[i], h_yy_gold[i]);
+		printf("%lu %f %f\n", i, h_yy[i], h_yy_gold[i]);
 	}
 	
 	cudaError_t code = cudaGetLastError();

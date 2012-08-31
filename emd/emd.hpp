@@ -10,6 +10,7 @@
 #include <boost/random/normal_distribution.hpp>
 
 #include <bla/bla.hpp>
+#include <bla/math.hpp>
 
 // Empirical Mode Decomposition
 
@@ -59,15 +60,6 @@ namespace emd {
 			}
 		}
 		return x;
-	}
-	
-	unsigned int log2 (unsigned int val) {
-		unsigned int ret = 0;
-		while (val != 0) {
-			val >>= 1;
-			++ret;
-		}
-		return ret;
 	}
 	
 	template <typename T>
