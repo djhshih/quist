@@ -1,5 +1,5 @@
-#ifndef quist_bla_h
-#define quist_bla_h
+#ifndef _bla_hpp_
+#define _bla_hpp_
 
 // Basic Linear Algebra
 

@@ -7,10 +7,11 @@
 #include <cmath>
 #include <ctime>
 
+#include <numeric/bla.hpp>
+
 #include "spline_kernel.hpp"
 #include "tridiag_rd_kernel.hpp"
 #include "scan_kernel.hpp"
-#include "../../bla/bla.hpp"
 #include "cudpp/crpcr.hpp"
 
 using namespace std;

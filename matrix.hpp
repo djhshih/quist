@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <cmath>
 
-#include <bla/bla.hpp>
+#include <numeric/bla.hpp>
 
 namespace quist {
 

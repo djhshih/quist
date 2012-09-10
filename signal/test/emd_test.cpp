@@ -7,7 +7,10 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "../util.hpp"
 #include "../emd.hpp"
+#include "../eemd.hpp"
+#include "../dsemd.hpp"
 #include "../../equal.hpp"
 #include "../../hdf5/data.hpp"
 
@@ -37,8 +40,8 @@ BOOST_AUTO_TEST_CASE ( extrema_test )
 	double* max_y = new double[n];
 	
 	size_t n_min, n_max;
-	emd::minima(n, x.data(), y.data(), &n_min, min_x, min_y);
-	emd::maxima(n, x.data(), y.data(), &n_max, max_x, max_y);
+	signal::minima(n, x.data(), y.data(), &n_min, min_x, min_y);
+	signal::maxima(n, x.data(), y.data(), &n_max, max_x, max_y);
 	
 	BOOST_CHECK(n_max_ans == n_max);
 	BOOST_CHECK(n_min_ans == n_min);
@@ -65,11 +68,11 @@ BOOST_AUTO_TEST_CASE ( emd_test )
 	size_t n = x.size();
 	size_t nmodes = 4;
 	
-	double** modes = emd::emd(n, x.data(), y.data(), &nmodes);
+	double** modes = signal::emd(n, x.data(), y.data(), &nmodes);
 	
 	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 1e-5), "EMD modes did not match expected");
 	
-	emd::free_arrays(modes, nmodes);
+	signal::free_arrays(modes, nmodes);
 }
 
 BOOST_AUTO_TEST_CASE ( eemd_test )
@@ -82,12 +85,12 @@ BOOST_AUTO_TEST_CASE ( eemd_test )
 	size_t n = x.size();
 	size_t nmodes = 4;
 	
-	double** modes = emd::eemd(n, x.data(), y.data(), &nmodes, 0.01, 20);
+	double** modes = signal::eemd(n, x.data(), y.data(), &nmodes, 0.01, 20);
 	
 	// use a lenient difference threshold, since differences are expected
 	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 1e-1), "EEMD modes did not match expected");
 	
-	emd::free_arrays(modes, nmodes);
+	signal::free_arrays(modes, nmodes);
 }
 
 BOOST_AUTO_TEST_CASE ( dsemd_test )
@@ -100,12 +103,12 @@ BOOST_AUTO_TEST_CASE ( dsemd_test )
 	size_t n = x.size();
 	size_t nmodes = 4;
 	
-	double** modes = emd::dsemd(n, x.data(), y.data(), &nmodes, 100, 1000);
+	double** modes = signal::dsemd(n, x.data(), y.data(), &nmodes, 100, 1000);
 	
 	// use a very lenient difference threshold, since differences are expected
 	BOOST_CHECK_MESSAGE(check_arrays_equal(modes, ans.data(), nmodes, n, 8e-1), "DS-EMD modes did not match expected");
 	
-	emd::free_arrays(modes, nmodes);
+	signal::free_arrays(modes, nmodes);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -65,9 +65,8 @@ int main(int argc, char* argv[]) {
 	// retrieve results from device and store it in host array
 	cudaMemcpy(h_modes, d_modes, nbytes_modes, cudaMemcpyDeviceToHost);
 	
-	/*
 	// compute gold standard
-	float** gold_modes = emd::emd(N, h_x, h_y, &k);
+	float** gold_modes = signal::emd(N, h_x, h_y, &k);
 
 	// print results
 	for (size_t i = 0; i < k; ++i) {
@@ -82,8 +81,7 @@ int main(int argc, char* argv[]) {
 		printf("grid_dim = %d, block_dim = %d\n", grid_dim.x, block_dim.x);
 	}
 	
-	emd::free_arrays(gold_modes, k);
-	*/
+	signal::free_arrays(gold_modes, k);
 
 	// clean up
 	free(h_x);

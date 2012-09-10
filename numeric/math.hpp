@@ -1,5 +1,5 @@
-#ifndef quist_math_h
-#define quist_math_h
+#ifndef _math_hpp_
+#define _math_hpp_
 
 namespace math {
 

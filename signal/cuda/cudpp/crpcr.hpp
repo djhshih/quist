@@ -24,7 +24,7 @@
  * @{
  */
 
-#include <bla/math.hpp>
+#include <numeric/math.hpp>
 
 #include "../util.hpp"
 #include "tridiag_crpcr_kernel.hpp"
