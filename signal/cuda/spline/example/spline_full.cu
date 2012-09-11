@@ -9,10 +9,11 @@
 
 #include <numeric/bla.hpp>
 
-#include "spline_kernel.hpp"
-#include "tridiag_rd_kernel.hpp"
-#include "scan_kernel.hpp"
-#include "cudpp/crpcr.hpp"
+#include "../kernel/spline_kernel.hpp"
+#include "../../tridiag/kernel/rd_kernel.hpp"
+#include "../../scan/kernel/inclusive_scan_kernel.hpp"
+#include "../../scan/functor/static_matrix_functor.hpp"
+#include "../../cudpp/crpcr.hpp"
 
 using namespace std;
 
@@ -157,7 +158,7 @@ int main(int argc, char* argv[]) {
 	// prerequisite: d_c[0] and d_c[n-1] are already set to 0
 	//rd_tridiag <<< grid_dim, block_dim >>> (N2, d_C, d_c+1);
 	
-	crpcr(d_sub, d_main, d_sup, d_r, d_c, N, 1);
+	crpcr(N, 1, d_sub, d_main, d_sup, d_r, d_c);
 	
 	
 	ncspline_teardown <<< grid_dim, block_dim >>> (N, d_x, d_y, d_c, d_b, d_d);

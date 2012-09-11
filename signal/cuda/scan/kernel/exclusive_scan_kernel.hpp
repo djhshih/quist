@@ -3,6 +3,8 @@
 #define LOG_NUM_BANKS 5
 #define CONFLICT_FREE_OFFSET(n)  ((n) >> NUM_BANKS + (n) >> (2 * LOG_NUM_BANKS))  
 
+// TODO  Use functors
+
 template <typename T>
 __global__ void prescan(size_t n, const T* x, T* y) {
 	extern __shared__ T shared[];

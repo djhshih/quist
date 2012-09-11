@@ -1,4 +1,3 @@
-
 // hack to make nvcc work with gcc-4.7
 #undef _GLIBCXX_ATOMIC_BUILTINS
 #undef _GLIBCXX_USE_INT128
@@ -8,8 +7,9 @@
 
 #define _DEBUG
 
-#include "util.hpp"
-#include "scan_kernel.hpp"
+#include "../../util.hpp"
+#include "../kernel/inclusive_scan_kernel.hpp"
+#include "../functor/static_matrix_functor.hpp"
 
 
 using namespace std;

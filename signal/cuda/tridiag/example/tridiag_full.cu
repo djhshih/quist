@@ -1,4 +1,3 @@
-
 // hack to make nvcc work with gcc-4.7
 #undef _GLIBCXX_ATOMIC_BUILTINS
 #undef _GLIBCXX_USE_INT128
@@ -9,9 +8,12 @@
 
 #include <numeric/bla.hpp>
 
-#include "tridiag_rd_kernel.hpp"
-#include "scan_kernel.hpp"
-#include "spline_kernel.hpp"
+#include "../kernel/rd_kernel.hpp"
+#include "../../scan/kernel/inclusive_scan_kernel.hpp"
+#include "../../spline/kernel/spline_kernel.hpp"
+
+#include "../../scan/functor/static_matrix_functor.hpp"
+
 
 using namespace std;
 

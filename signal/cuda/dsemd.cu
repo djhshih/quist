@@ -75,12 +75,12 @@ int main(int argc, char* argv[]) {
 	cudaMemcpy(h_counts, d_counts, nbytes_counts, cudaMemcpyDeviceToHost);
 	
 	// compute gold standard
-	real_t** gold_modes = emd::emd(N, h_x, h_y, &k);
+	real_t** gold_modes = signal::emd(N, h_x, h_y, &k);
 	
 	//std::srand((unsigned)std::time(NULL));
-	//real_t** gold_modes = emd::dsemd(N, h_x, h_y, &k, ns, nr);
+	//real_t** gold_modes = signal::dsemd(N, h_x, h_y, &k, ns, nr);
 	
-	//real_t** gold_modes = emd::eemd(N, h_x, h_y, &k, (real_t)0.05, 512);
+	//real_t** gold_modes = signal::eemd(N, h_x, h_y, &k, (real_t)0.05, 512);
 
 	// print results
 	for (size_t i = 0; i < k; ++i) {
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 	free(h_modes);
 	free(h_counts);
 	
-	emd::free_arrays(gold_modes, k);
+	signal::free_arrays(gold_modes, k);
 	
 	cudaFree(d_x);
 	cudaFree(d_y);

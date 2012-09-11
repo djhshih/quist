@@ -1,11 +1,11 @@
-
 // hack to make nvcc work with gcc-4.7
 #undef _GLIBCXX_ATOMIC_BUILTINS
 #undef _GLIBCXX_USE_INT128
 
 #include <cstdio>
 
-#include "scan_kernel.hpp"
+#include "../../util.hpp"
+#include "../kernel/exclusive_scan_kernel.hpp"
 
 using namespace std;
 
@@ -90,11 +90,7 @@ int main(int argc, char* argv[]) {
 	}
 	*/
 	
-	cudaError_t code = cudaGetLastError();
-	if (code != cudaSuccess) {
-		printf("%s\n", cudaGetErrorString(code));
-		printf("grid_dim = %d, block_dim = %d\n", grid_dim.x, block_dim.x);
-	}
+	CUDA_CHECK_ERROR("end");
 	
 	// clean up
 	free(h_x);

@@ -27,7 +27,7 @@
 #include <numeric/math.hpp>
 
 #include "../util.hpp"
-#include "tridiag_crpcr_kernel.hpp"
+#include "kernel/crpcr_kernel.hpp"
 
 template <typename T>
 inline unsigned int crpcrSharedSize(unsigned int systemSizeOriginal)
@@ -51,14 +51,15 @@ inline unsigned int crpcrSharedSize(unsigned int systemSizeOriginal)
  * @param[in] numSystems The number of systems to be solved
  */
 template <typename T>
-void crpcr(T *d_a, 
-           T *d_b, 
-           T *d_c, 
-           T *d_d, 
-           T *d_x, 
-           unsigned int systemSizeOriginal, 
-           unsigned int numSystems)
-{
+void crpcr(
+	unsigned int systemSizeOriginal, 
+	unsigned int numSystems,
+	T *d_a, 
+	T *d_b, 
+	T *d_c, 
+	T *d_d, 
+	T *d_x
+) {
     const unsigned int systemSize = math::pow2ceil(systemSizeOriginal);
     const unsigned int num_threads_block = systemSize/2;
     const unsigned int restSystemSize = systemSize/2;
