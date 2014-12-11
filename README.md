@@ -12,6 +12,6 @@ Work in progress.
 ### Build ###
 
     mkdir build
-		cmake ..
-		make
+    cmake ..
+    make
 
