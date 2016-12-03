@@ -171,7 +171,7 @@ namespace quist {
 				// average score in summation window
 				scores[i] = 0;
 				for (size_t ii = start; ii < end; ++ii) {
-					scores[i] += bla::dot(rep[i], rep[ii], n);
+					scores[i] += bla::dot(n, rep[i], rep[ii]);
 				}
 				// divide by window size (and by n to complete the score calculation)
 				scores[i] /= (end - start) * n;
