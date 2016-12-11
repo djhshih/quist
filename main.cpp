@@ -74,8 +74,6 @@ int main(int argc, char **argv) {
 		cout << scores[i] << endl;
 	}
 	
-	delete [] scores;
-	
 	return 0;
 }
 
