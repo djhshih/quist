@@ -22,7 +22,7 @@ namespace quist {
 	class Matrix {
 
 	private:
-		// number of rows and cols
+		// number of variables and samples
 		size_t m, n;
 		// data
 		T **rep;
@@ -35,7 +35,7 @@ namespace quist {
 			scores = means = sds = NULL;
 		}
 
-		// calculate means and SDs of each row using Welford's method
+		// calculate means and SDs of each variable using Welford's method
 		void summarize() {
 			if (means != NULL) {
 				delete [] means;
@@ -90,7 +90,9 @@ namespace quist {
 		void read(const string& fileName) {
 			fstream file;
 			file.open(fileName.c_str(), ios::in);
-			if (!file.is_open()) throw runtime_error("Failed to open input file.");
+			if (!file.is_open()) {
+				string s = "Failed to open input file: ";
+				throw runtime_error(s + fileName);
 			read(file);
 			file.close();
 		}
@@ -157,9 +159,16 @@ namespace quist {
 			}
 		}
 		
+		// class is responsible for clearing `scores`
 		T* evaluate(size_t window) {
 			clearCache();
 			scores = new T[m];
+			
+			// calculate L2-norms
+			T* norms = new T[m];
+			for (size_t i = 0; i < m; ++i) {
+				norms[i] = std::sqrt(bla::dot(n, rep[i], rep[i]));
+			}
 
 			for (size_t i = 0; i < m; ++i) {
 				// determine summation window
@@ -167,14 +176,14 @@ namespace quist {
 				if (start < 0) start = 0;
 				long end = i + window/2 + 1;
 				if (end > m) end = m;
-
-				// average score in summation window
-				scores[i] = 0;
+				
+				// sum cosine similarities within window
+				T score = 0;
 				for (size_t ii = start; ii < end; ++ii) {
-					scores[i] += bla::dot(n, rep[i], rep[ii]);
+					score += bla::dot(n, rep[i], rep[ii]) / (norms[i] * norms[ii]);
 				}
-				// divide by window size (and by n to complete the score calculation)
-				scores[i] /= (end - start) * n;
+				// divide by window size to calculate the window mean
+				scores[i] = score / (end - start);
 			}
 
 			return scores;
