@@ -93,6 +93,7 @@ namespace quist {
 			if (!file.is_open()) {
 				string s = "Failed to open input file: ";
 				throw runtime_error(s + fileName);
+			}
 			read(file);
 			file.close();
 		}
@@ -185,6 +186,8 @@ namespace quist {
 				// divide by window size to calculate the window mean
 				scores[i] = score / (end - start);
 			}
+
+			delete [] norms;
 
 			return scores;
 		}
