@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 		
 	// output the detrended scores
 	if (!outputRawFileName.empty()) {
-		ofstream fout(outputRawFileName);
+		ofstream fout(outputRawFileName.c_str());
 		if (!fout.is_open()) {
 			string s = "Failed to open output file: ";
 			throw runtime_error(s + outputRawFileName);
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 	
 	// output modes
 	if (!outputModesFileName.empty()) {
-		ofstream fout(outputModesFileName);
+		ofstream fout(outputModesFileName.c_str());
 		if (!fout.is_open()) {
 			string s = "Failed to open output file: ";
 			throw runtime_error(s + outputModesFileName);
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	
 	// output the detrended scores
 	if (!outputFileName.empty()) {
-		ofstream fout(outputFileName);
+		ofstream fout(outputFileName.c_str());
 		if (!fout.is_open()) {
 			string s = "Failed to open output file: ";
 			throw runtime_error(s + outputFileName);
