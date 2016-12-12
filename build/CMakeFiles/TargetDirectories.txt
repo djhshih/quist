@@ -1,3 +1,0 @@
-C:/Users/davids/projects/quist/build/CMakeFiles/quist.dir
-C:/Users/davids/projects/quist/build/CMakeFiles/edit_cache.dir
-C:/Users/davids/projects/quist/build/CMakeFiles/rebuild_cache.dir

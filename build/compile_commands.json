@@ -1,7 +1,0 @@
-[
-{
-  "directory": "C:/Users/davids/projects/quist/build",
-  "command": "C:\\Opt\\mingw\\bin\\g++.exe    @CMakeFiles/quist.dir/includes_CXX.rsp -g   -o CMakeFiles\\quist.dir\\main.cpp.obj -c C:\\Users\\davids\\projects\\quist\\main.cpp",
-  "file": "C:/Users/davids/projects/quist/main.cpp"
-}
-]
