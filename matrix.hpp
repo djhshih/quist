@@ -106,8 +106,15 @@ namespace quist {
 			
 			// get dimensions
 			getline(file, line);
-			stream.str(line);
+			if (line[0] != '#') {
+				throw runtime_error("First line of input must be: # <n_rows> <n_columns>");
+			}
+			// skip the comment character and extract dimensions
+			stream.str(line.substr(1));
 			stream >> m >> n;
+			if (m == 0 || n == 0) {
+				throw runtime_error("Input data dimensions not valid");
+			}
 			
 			// allocate array
 			rep = new T*[m];

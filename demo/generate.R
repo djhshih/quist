@@ -70,7 +70,7 @@ hist(scores, breaks=25, xlab="score");
 
 # write output
 
-write.table(matrix(dim(x), ncol=2), "input.tsv", sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE);
+write.table(matrix(c("#", dim(x)), ncol=3), "input.tsv", sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE);
 write.table(x, "input.tsv", sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE, append=TRUE);
 write.table(scores, "raw-scores_r.vtr", row.names=FALSE, col.names=FALSE, quote=FALSE);
 
