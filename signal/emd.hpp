@@ -123,8 +123,8 @@ namespace signal {
 	 * @param max_iter max number of iterations per instrict mode function
 	 * @return array of k instrinsic mode functions (array of size n, evaluated at x)
 	 */
-	template <typename T, typename U>
-	T** emd(size_t n, const T x[], const U y[], size_t* kk, size_t max_iter=10) {
+	template <typename U, typename T>
+	T** emd(size_t n, const U x[], const T y[], size_t* kk, size_t max_iter=10) {
 	
 		size_t k = *kk;
 		if (k <= 1) {
@@ -136,20 +136,20 @@ namespace signal {
 		}
 		
 		// allocate memory
-		U** modes = new U*[k];
+		T** modes = new T*[k];
 		
 		// allocate arrays for storing x and y values of extrema points, 
 		//   and upper and lower envelops
-		T* min_x = new T[n];
-		T* max_x = new T[n];
-		U* min_y = new U[n];
-		U* max_y = new U[n];
-		U* upper = new U[n];
-		U* lower = new U[n];
+		U* min_x = new U[n];
+		U* max_x = new U[n];
+		T* min_y = new T[n];
+		T* max_y = new T[n];
+		T* upper = new T[n];
+		T* lower = new T[n];
 		
 		// copy data for computing running signal
-		U* running = copied(y, n);
-		U* current = new U[n];
+		T* running = copied(y, n);
+		T* current = new T[n];
 		
 		for (size_t i = 0; i < k-1; ++i) {
 			copy(current, running, n);

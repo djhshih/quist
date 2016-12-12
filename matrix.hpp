@@ -160,7 +160,7 @@ namespace quist {
 			}
 		}
 		
-		// class is responsible for clearing `scores`
+		// class is responsible for deallocating `scores`
 		T* evaluate(size_t window) {
 			clearCache();
 			scores = new T[m];

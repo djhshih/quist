@@ -59,8 +59,8 @@ namespace bla {
 	 * @param c output c coefficients
 	 * @param d output d coefficients
 	 */
-	template <typename T>
-	void ncspline(size_t n, const T x[], const T y[], T b[], T c[], T d[]) {
+	template <typename U, typename T>
+	void ncspline(size_t n, const U x[], const T y[], T b[], T c[], T d[]) {
 
 		// calculate h_i = x_i+1 - x_i
 		T *h = new T[n-1];
@@ -118,8 +118,8 @@ namespace bla {
 	 * @param xx values of x at data points to be interpolated
 	 * @param yy output interpolated values
 	 */
-	template <typename T>
-	void splint(size_t n, const T x[], const T a[], const T b[], const T c[], const T d[], size_t nn, const T xx[], T yy[]) {
+	template <typename U, typename T>
+	void splint(size_t n, const U x[], const T a[], const T b[], const T c[], const T d[], size_t nn, const U xx[], T yy[]) {
 
 		size_t ii = 0;
 		for (size_t i = 0; i < n-1; ++i) {
@@ -150,8 +150,8 @@ namespace bla {
 	 * @param xx values of x at data points to be interpolated
 	 * @param yy output interpolated values
 	 */
-	template <typename T>
-	void splint(size_t n, const T x[], const T y[], size_t nn, const T xx[], T yy[]) {
+	template <typename U, typename T>
+	void splint(size_t n, const U x[], const T y[], size_t nn, const U xx[], T yy[]) {
 		T* b = new T[n];
 		T* c = new T[n];
 		T* d = new T[n];
