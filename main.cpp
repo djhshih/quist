@@ -118,6 +118,11 @@ int main(int argc, char **argv) {
 		fout << endl;
 	}
 
+	// apply Fisher's z-transformation on the scores
+	for (size_t i = 0; i < p; ++i) {
+		scores[i] = atanh(scores[i]);
+	}
+
 	// detrend the scores
 	
 	// default x to (1, 2, ..., p)
